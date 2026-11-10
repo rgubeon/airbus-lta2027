@@ -9,11 +9,11 @@
   const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const pad2 = (v) => String(v).padStart(2, '0');
-  const setCnt = (e, i, n) => { if (e.closest('.steps') || e.hasAttribute('data-pad')) e.innerHTML = `<b>${pad2(i + 1)}</b><span>/ ${pad2(n)}</span>`; else e.textContent = `${i + 1} de ${n}`; };
+  const setCnt = (e, i, n) => { if (e.closest('.steps') || e.hasAttribute('data-pad')) e.innerHTML = `<b>${pad2(i + 1)}</b><span>/ ${pad2(n)}</span>`; else e.textContent = `${i + 1} / ${n}`; };
   const BG = { night: '#001c3b', navy: '#243a5e', sky: '#e4ebf4', dusk: '#3c5078' };
-  const PROFILE = { act2: 'night', s00: 'night', s01: 'navy', s02a: 'sky', s02b: 'night', s03a: 'night', s03b: 'night', s03c: 'sky', s04a: 'sky', s04b: 'sky', s05: 'night', s06: 'night', s07: 'night', s08: 'night', s09: 'night' };
+  const PROFILE = { act2: 'night', s00: 'night', s01: 'navy', s02: 'navy', s02a: 'sky', s02b: 'night', s03a: 'night', s03b: 'night', s03c: 'night', s04a: 'sky', s04b: 'sky', s04c: 'night', s04d: 'night', s05: 'night', s06: 'night', s06b: 'night', s07: 'night', s08: 'night', s09: 'night' };
   // how present the vector field is behind each scene (content-heavy scenes keep it quieter)
-  const FIELD = { s00: 1, s01: .85, s02a: .6, s02b: .5, s03a: .7, s03b: .8, s03c: .45, s04a: .45, s04b: .4, s05: .75, s06: .8, s07: .75, s08: .5, s09: .6 };
+  const FIELD = { s00: 1, s01: .85, s02a: .6, s02b: .5, s03a: .7, s03b: .8, s03c: .45, s04a: .4, s04b: .4, s04c: .6, s04d: .6, s05: .75, s06: .8, s06b: .5, s07: .75, s08: .5, s09: .6 };
   const secs = $$('main > .sc, .ft');
   const RMQ = matchMedia('(prefers-reduced-motion: reduce)');
   ScrollTrigger.config({ ignoreMobileResize: true });
@@ -22,16 +22,7 @@
   fit();
   addEventListener('resize', fit);
 
-  // 7 nov: each «Digital por defecto» caption sits 24 px under its own mockup (they have different heights)
-  function capFit() {
-    $$('#s03c .stage-l [data-a=mock]').forEach(m => {
-      const c = m.firstElementChild && m.firstElementChild.firstElementChild, cap = m.lastElementChild;
-      if (c && cap && c !== cap && c.offsetHeight) cap.style.top = (c.offsetTop + c.offsetHeight + 24) + 'px';
-    });
-  }
-  capFit();
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(capFit);
-  addEventListener('load', capFit);
+  // (v2.11: the touchpoint captions were removed; the old caption fitter is gone)
 
   /* ---------- smooth scroll (wheel only; touch keeps native momentum) ---------- */
   let lenis = null;
@@ -89,9 +80,9 @@
     const fieldNow = { s: 0, p: 0 };
     function paint(g, W, H, dpr, s, p, dark, amt) {
       const line = (x1, y1, x2, y2) => { g.moveTo(x1, y1); g.lineTo(x2, y2); };
-      const rgb = dark ? '0,32,91' : '201,211,227', A = (dark ? .11 : .14) * amt * (W < 768 ? .6 : 1);
+      const rgb = dark ? '0,32,91' : '201,211,227', A = (dark ? .11 : .14) * amt * (W < 768 || (W < H && W < 1200) ? .6 : 1);
       const st = (a) => (g.strokeStyle = `rgba(${rgb},${Math.max(0, Math.min(1, a)).toFixed(3)})`);
-      const mob = W < 768;
+      const mob = W < 768 || (W < H && W < 1200);
       const hy = H * ((mob ? .84 : .70) + (mob ? .05 : .08) * Math.sin(p * Math.PI * 2.4 + 0.5)), vx = W * 0.5;
       g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H); g.lineWidth = 1;
       // sky: rays fanning up from the vanishing point, turning slowly with the scroll
@@ -247,7 +238,7 @@
   }
 
   const mm = gsap.matchMedia();
-  mm.add({ mob: '(max-width: 767px), (max-height: 560px)', lap: '(min-width: 768px) and (min-height: 561px) and (max-width: 1679px)', desk: '(min-width: 1680px) and (min-height: 561px)', short: '(max-height: 560px)', reduce: '(prefers-reduced-motion: reduce)' }, (ctx) => {
+  mm.add({ mob: '(max-width: 767px), (max-height: 560px), (orientation: portrait) and (max-width: 1199px)', lap: '(min-width: 768px) and (min-height: 561px) and (max-width: 1679px) and (orientation: landscape), (min-width: 1200px) and (min-height: 561px) and (max-width: 1679px)', desk: '(min-width: 1680px) and (min-height: 561px)', short: '(max-height: 560px)', reduce: '(prefers-reduced-motion: reduce)' }, (ctx) => {
     const c = ctx.conditions, RM = c.reduce || c.short;
     const stageOf = (sec) => (sec.classList.contains('ft') ? sec : $(c.mob ? '.stage-m' : '.stage-l', sec));
     const k = () => (c.mob ? 1 : parseFloat(getComputedStyle(root).getPropertyValue('--k')) || 1);
@@ -256,15 +247,15 @@
     const own = (els) => { (els && els.length !== undefined ? els : [els]).forEach(e => e && HANDLED.add(e)); return els; };
     // Act 2 (6 nov, Israel's sketches): on laptop the map, proposal, concept, digital, venue, plenary, social event,
     // crew and sustainability are layers of ONE pinned scene; each gesture plays one step or one hand-over, in time
-    const A2IDS = ['s02b', 's03a', 's03b', 's03c', 's04a', 's04b', 's05', 's06', 's07'];
-    const ACT2 = !c.mob && !RM && !!$('#s02b');
+    const A2IDS = ['s03a', 's03b', 's03c', 's04b', 's04a', 's04c', 's05', 's06', 's06b', 's07'];
+    const ACT2 = !c.mob && !RM && !!$('#s03a');
     const A2X = { loops: [] };
     let a2wrap = null;
     if (ACT2) {
       a2wrap = document.createElement('section');
-      a2wrap.id = 'act2'; a2wrap.className = 'sc a2'; a2wrap.dataset.ch = $('#s02b').dataset.ch; a2wrap.dataset.th = 'night';
-      a2wrap.setAttribute('aria-label', 'Conferencia, propuesta, implantación y equipo');
-      $('#s02b').before(a2wrap);
+      a2wrap.id = 'act2'; a2wrap.className = 'sc a2'; a2wrap.dataset.ch = $('#s03a').dataset.ch; a2wrap.dataset.th = 'night';
+      a2wrap.setAttribute('aria-label', 'Proposal, conference, location, social event, team and sustainability');
+      $('#s03a').before(a2wrap);
       A2IDS.forEach(id => { const s = $('#' + id); s.classList.add('a2l'); a2wrap.appendChild(s); });
     }
     const SECS = ACT2 ? secs.filter(s => !A2IDS.includes(s.id)).flatMap(s => (s.id === 's00' ? [s, a2wrap] : [s])) : secs;
@@ -369,36 +360,22 @@
     try {
       const sec = $('#s00'), S = stageOf(sec);
       HANDLED.add(S);
-      const hero = $('.lay-hero', S), brief = $('#s01', S), agL = $('#s02a', S);
-      const land = $('.land', sec), holeP = $('#landholep'), lp = $('.lp', land), li = $('.li', land), scrim = $('.scrim', land);
-      const kv = $('[data-a=kv]', S), ly = (q) => $$(`.kl[data-l=${q}] .ki`, kv), kl = (q) => $$(`.kl[data-l=${q}]`, kv);
-      const days = $$('button[data-day]', agL), parts = $$('[data-part]', agL);
+      const hero = $('.lay-hero', S), brief = $('#s01', S), objL = $('#s02', S), agL = $('#s02a', S);
+      const land = $('.land', sec), lrh = $('.lrh', sec), holeP = $('#landholep'), lp = $('.lp', land), li = $('.li', land), scrim = $('.scrim', land);
+      const days = $$('button[data-day]', agL), parts = [];
       const sh = $('[data-a=shutter]', agL), ph = $$('[data-a^=ph]', agL), rest = (+sh.dataset.rest || 36) + 'px';
       const win = sh.parentElement, frame = win.parentElement;
 
-      /* hero intro, once, on load */
+      /* hero intro, once, on load (v2: no key visual on the cover; the name, dates and city rise in) */
       const intro = gsap.timeline();
       if (RM) intro.from(hero, { opacity: 0, duration: .2 });
       else {
-        intro.from(ly('rearL'), { xPercent: -70, opacity: 0, duration: 1.2, ease: 'expo.out' }, .05)
-          .from(ly('rearR'), { xPercent: 70, opacity: 0, duration: 1.2, ease: 'expo.out' }, .05)
-          .fromTo(ly('win'), { clipPath: 'inset(48% 48% 48% 48% round 14px)', scale: .86, opacity: 0 },
-            { clipPath: 'inset(0% 0% 0% 0% round 0px)', scale: 1, opacity: 1, duration: 1.15, ease: 'expo.out', stagger: { each: .14, from: 'center' } }, .2)
-          .fromTo($$('.pi', kv), { scale: 1.18, transformOrigin: '50% 50%' }, { scale: 1, duration: 1.6, ease: 'expo.out', stagger: .06 }, .2)
-          .from(ly('c295'), { xPercent: -38, yPercent: 34, rotation: -5, opacity: 0, duration: 1.5, ease: 'power3.out' }, .55)
-          .from(ly('cn235'), { xPercent: 55, yPercent: -40, rotation: 7, opacity: 0, duration: 1.35, ease: 'power3.out' }, .8)
-          .from($$('[data-a=cl1],[data-a=cl2]', hero), { yPercent: 60, opacity: 0, duration: .8, stagger: .12, ease: 'power3.out' }, .7)
-          .from($$('[data-a=badge]', hero), { scale: .8, rotation: -20, opacity: 0, duration: 1.1, ease: 'power3.out' }, 1)
-          .from($$('[data-a=sub],[data-a=cta]', hero), { y: 16, opacity: 0, duration: .5, stagger: .1, ease: 'power3.out' }, 1.1);
-        if ($('.kbar', hero)) intro.from($('.kbar', hero), { scaleX: 0, transformOrigin: '0% 50%', duration: .7, ease: 'power3.out' }, .95);
-        if ($('.hatch27', hero)) intro.from($('.hatch27', hero), { clipPath: 'inset(0 100% 0 0)', duration: .9, ease: 'power2.out' }, 1);
-        if (!c.mob && !CAP && matchMedia('(hover: hover) and (pointer: fine)').matches) {
-          const qs = $$('.kp', kv).map(p => { const d = +p.parentElement.dataset.depth || .5; return [d, gsap.quickTo(p, 'x', { duration: .9, ease: 'power3.out' }), gsap.quickTo(p, 'y', { duration: .9, ease: 'power3.out' })]; });
-          const qp = $$('.ph', kv).map(g => [gsap.quickTo(g, 'x', { duration: 1.1, ease: 'power3.out' }), gsap.quickTo(g, 'y', { duration: 1.1, ease: 'power3.out' })]);
-          sec.addEventListener('pointermove', e => { const nx = e.clientX / innerWidth - .5, ny = e.clientY / innerHeight - .5;
-            qs.forEach(([d, qx, qy]) => { qx(-nx * 46 * d); qy(-ny * 26 * d); }); qp.forEach(([qx, qy]) => { qx(nx * 34); qy(ny * 18); }); });
-          sec.addEventListener('pointerleave', () => { qs.forEach(([, qx, qy]) => { qx(0); qy(0); }); qp.forEach(([qx, qy]) => { qx(0); qy(0); }); });
-        }
+        const ifrom = (q, v, at) => { const e = $$(q, hero); if (e.length) intro.from(e, v, at); };
+        ifrom('[data-a=sub]', { y: 16, opacity: 0, duration: .6, ease: 'power3.out' }, .15);
+        ifrom('.h1v2 > span', { yPercent: 60, opacity: 0, duration: 1.0, stagger: .14, ease: 'power3.out' }, .3);
+        ifrom('.kmeta > span, .kmeta > i', { y: 18, opacity: 0, duration: .7, stagger: .1, ease: 'power3.out' }, .75);
+        ifrom('.sig', { opacity: 0, duration: .8, ease: 'power1.out' }, 1.0);
+        ifrom('[data-a=cta]', { y: 16, opacity: 0, duration: .5, ease: 'power3.out' }, 1.1);
       }
       if (CAP) intro.progress(1);
 
@@ -423,22 +400,23 @@
           .to(beam, { opacity: 0, duration: .06 }, 1.35)
           .fromTo(Array.from(bc.children), { opacity: .15 }, { opacity: 1, duration: .02, stagger: .38 / bc.children.length }, .95);
       }
+      // v2.6: a real rubber stamp made from the conference logo: the logo is inked in one colour (its light parts stay
+      // paper), with a double rim, text on the ring and worn ink
       const stamp = document.createElement('div'); stamp.className = 'stamp'; stamp.setAttribute('aria-hidden', 'true');
       const sid = 'stp' + (c.mob ? 'm' : 'l');
-      // a real rubber stamp: worn ink (turbulence mask), double rim, text on the ring, big enough to run off the card's edge
-      stamp.innerHTML = `<svg viewBox="0 0 200 200"><defs><path id="${sid}" d="M100 100 m-70 0 a70 70 0 1 1 140 0 a70 70 0 1 1 -140 0"/>
+      stamp.innerHTML = `<svg viewBox="0 0 200 200"><defs><path id="${sid}" d="M100 100 m-77 0 a77 77 0 1 1 154 0 a77 77 0 1 1 -154 0"/>
+        <filter id="${sid}i" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0 0 0 0 .043  0 0 0 0 .227  0 0 0 0 .561  -.45 -.9 -.15 1.15 0"/></filter>
         <filter id="${sid}f" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="7" result="n"/>
-        <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.7 1.5" result="m"/><feComposite in="SourceGraphic" in2="m" operator="in" result="ink"/>
-        <feTurbulence type="fractalNoise" baseFrequency=".04" numOctaves="1" seed="3" result="w"/><feDisplacementMap in="ink" in2="w" scale="2.2"/></filter></defs>
+        <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.2 1.75" result="m"/><feComposite in="SourceGraphic" in2="m" operator="in" result="ink"/>
+        <feTurbulence type="fractalNoise" baseFrequency=".04" numOctaves="1" seed="3" result="w"/><feDisplacementMap in="ink" in2="w" scale="2"/></filter></defs>
         <g filter="url(#${sid}f)" fill="none" stroke="currentColor">
-        <circle cx="100" cy="100" r="94" stroke-width="5"/><circle cx="100" cy="100" r="86" stroke-width="1.6"/><circle cx="100" cy="100" r="55" stroke-width="2.2"/>
-        <text font-size="15" font-weight="800" letter-spacing="3.6" fill="currentColor" stroke="none"><textPath href="#${sid}">SEVILLA · SVQ · CLEARED · LTA 2027 ·</textPath></text>
-        <text x="100" y="92" text-anchor="middle" font-size="13" font-weight="700" letter-spacing="2" fill="currentColor" stroke="none">SAN PABLO</text>
-        <text x="100" y="122" text-anchor="middle" font-size="31" font-weight="800" letter-spacing="1" fill="currentColor" stroke="none">2027</text>
-        <path d="M58 132 H142" stroke-width="2"/><path d="M78 66 l22-6 22 6" stroke-width="2"/></g></svg>`;
+        <circle cx="100" cy="100" r="97" stroke-width="4"/><circle cx="100" cy="100" r="90" stroke-width="1.4"/>
+        <text font-size="11.5" font-weight="800" letter-spacing="2.6" fill="currentColor" stroke="none"><textPath href="#${sid}">SEVILLE · SVQ · 1–3 JUNE 2027 · CLEARED ·</textPath></text>
+        <circle cx="100" cy="100" r="66" stroke-width="1.6"/>
+        <image href="img/kv/badge.webp" x="38" y="38" width="124" height="124" filter="url(#${sid}i)"/></g></svg>`;
       card.appendChild(stamp);
-      pt.fromTo(stamp, { scale: 1.6, rotation: -30, opacity: 0 }, { scale: 1, rotation: -12, opacity: .7, duration: .26, ease: 'power4.in' }, 1.25)
-        .fromTo(card, { x: 0 }, { x: 3, duration: .04, yoyo: true, repeat: 1 }, 1.47);
+      pt.fromTo(stamp, { scale: 1.6, rotation: -30, opacity: 0 }, { scale: 1, rotation: -14, opacity: 1, duration: .26, ease: 'power4.in' }, 1.08)
+        .fromTo(card, { x: 0 }, { x: 3, duration: .04, yoyo: true, repeat: 1 }, 1.3);
       if ($('[data-a=sub]', brief)) pt.fromTo($('[data-a=sub]', brief), { y: 24, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: .4, ease: 'power2.out' }, .7);
       if (!RM && !c.mob && !CAP && matchMedia('(hover: hover) and (pointer: fine)').matches && $('[data-a=pass]', brief)) {
         const glare = document.createElement('i'); glare.className = 'glare'; glare.setAttribute('aria-hidden', 'true'); card.appendChild(glare);
@@ -455,50 +433,30 @@
         sec.addEventListener('pointerleave', onLeave);
       }
 
-      /* agenda: the day list reflows smoothly (FLIP) and its sessions come in one after another */
+      /* agenda (v2): one day at a time; the day's list replaces the other, its rows come in one after another */
       let ready = false, dayOn = 0, partOn = 0;
-      // the open list changes by height: the old one folds while the new one unfolds, at the same time and with the same
-      // curve, so the menu never jumps; its sessions then come in one by one
-      const visL = () => $$('.sess', agL).filter(o => o.offsetParent !== null);
-      const agSet = (d, p) => {
-        const before = visL(), hb = before.map(o => o.offsetHeight);   // layout px (the stage and the act wrapper are scaled)
-        dayOn = d; partOn = p;
-        agL.dataset.dayOn = d; agL.dataset.partOn = p;
+      const agSet = (d) => {
+        if (d === dayOn && ready && agL.dataset.dayOn != null) return;
+        dayOn = d; agL.dataset.dayOn = d;
         days.forEach(x => x.setAttribute('aria-selected', +x.dataset.day === d));
-        parts.forEach(t => t.setAttribute('aria-selected', +t.dataset.part === p));
-        $$('[data-cnt]', agL).forEach(e => setCnt(e, p, 4));
-        $$('.dots', agL).forEach(dd => $$('i', dd).forEach((dot, j) => dot.classList.toggle('on', j === p)));
+        $$('[data-cnt]', agL).forEach(e => setCnt(e, d, 3));
+        $$('.dots', agL).forEach(dd => $$('i', dd).forEach((dot, j) => dot.classList.toggle('on', j === d)));
         if (RM || CAP || !ready || getComputedStyle(agL).visibility === 'hidden') return;
-        const after = visL(), E = 'power2.inOut', D = .65, PB = (o) => parseFloat(getComputedStyle(o).paddingBottom) || 0, BB = (o) => getComputedStyle(o).boxSizing === 'border-box';
-        // the bottom padding folds with the list (it used to stay and jump at the end); a day change inside the same part
-        // is one list growing or shrinking to the new height, never two lists folding against each other
-        const same = (o) => after.find(x => x !== o && x.parentElement === o.parentElement);
-        before.forEach((o, j) => {
-          if (after.includes(o)) return;
-          gsap.killTweensOf(o); gsap.killTweensOf($$('li', o));
-          if (same(o)) { gsap.set(o, { clearProps: 'display,height,opacity,paddingBottom' }); return; }
-          const pb = PB(o);
-          gsap.fromTo(o, { display: 'block', height: hb[j] - (BB(o) ? 0 : pb), paddingBottom: pb, opacity: 1 }, { height: 0, paddingBottom: 0, opacity: 0, duration: D, ease: E, onComplete: () => gsap.set(o, { clearProps: 'display,height,opacity,paddingBottom' }) });
-        });
-        after.forEach(o => {
-          if (before.includes(o)) return;
-          gsap.killTweensOf(o);
-          const pb = PB(o), bb = BB(o) ? 0 : pb, prev = before.find(x => x.parentElement === o.parentElement), h0 = prev ? hb[before.indexOf(prev)] - bb : 0;
-          gsap.set(o, { height: 'auto', paddingBottom: pb }); const h1 = o.offsetHeight - bb;   // its natural height, measured once
-          gsap.fromTo(o, { height: Math.max(0, h0), paddingBottom: prev ? pb : 0 }, { height: h1, paddingBottom: pb, duration: D, ease: E, onComplete: () => gsap.set(o, { clearProps: 'height,paddingBottom' }) });
-          gsap.fromTo($$('li', o), { opacity: 0, y: 6 }, { opacity: 1, y: 0, duration: .5, stagger: .05, delay: prev ? .05 : .2, ease: 'power2.out', overwrite: 'auto' });
-        });
+        const rows = $$(`.dlist[data-day="${d}"] li`, agL).filter(li => li.offsetParent !== null);
+        gsap.fromTo(rows, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: .5, stagger: .06, delay: .15, ease: 'power2.out', overwrite: 'auto' });
       };
-      agSet(0, 0);
+      agSet(0);
 
       /* the landscape layer: it IS the central window, grown. At the hand-over the full photo is laid exactly where the
          window shows it and clipped to the window's frame; then frame and photo grow together to the full screen. */
-      const P = { show: 0, reveal: 0, hole: 0, gone: 0, par: 0, flip: 0 };
-      const win2 = kl('win')[1], w2svg = win2 && $('svg.ki', win2), w2pi = win2 && $('.pi', win2);
+      const P = { show: 0, rise: 0, reveal: 0, hole: 0, gone: 0, par: 0, flip: 0 };
+      const win2 = null, w2svg = null, w2pi = null;
       const nums = (el, k) => (el.dataset[k] || '').split(' ').map(Number);
       const rr = (x, y, w, h, r) => `M${x + r} ${y}H${x + w - r}A${r} ${r} 0 0 1 ${x + w} ${y + r}V${y + h - r}A${r} ${r} 0 0 1 ${x + w - r} ${y + h}H${x + r}A${r} ${r} 0 0 1 ${x} ${y + h - r}V${y + r}A${r} ${r} 0 0 1 ${x + r} ${y}Z`;
       const IA = 2400 / 1600, OVER = 1.12;  // photo aspect; the full-screen photo is a little larger than the screen, for parallax
       let from0 = null;  // frame + photo rects at the hand-over, measured once per pass (the KV may be drifting with the pointer)
+      // v2: no KV window to grow from; the landscape opens from a porthole in the middle of the screen
+      const measure0 = (lr) => { const w = Math.min(lr.width * .2, 260), h = w * 1.3; return { fr: { l: (lr.width - w) / 2, r: (lr.width - w) / 2, t: (lr.height - h) / 2, b: (lr.height - h) / 2 }, rad: w / 2, img: cover(lr) }; };
       const measure = (lr) => {
         const fr = w2svg.getBoundingClientRect(), [vw] = nums(w2svg, 'vb'), [fx, fy, fw, fh] = nums(w2svg, 'full'), [ix, iy, iw] = nums(w2svg, 'img');
         const pr = w2pi.getBoundingClientRect(), su = pr.width / iw;
@@ -507,12 +465,35 @@
       };
       const cover = (lr) => { const w = Math.max(lr.width, lr.height * IA) * OVER, h = w / IA; return { x: (lr.width - w) / 2, y: (lr.height - h) / 2, w, h }; };
       const lerp = (a, b, t) => a + (b - a) * t;
+      // a rounded rectangle centred on cx, cy, turned by ang degrees, as an SVG path in screen pixels
+      const rrot = (cx, cy, w, h, r, ang) => {
+        const c = Math.cos(ang * Math.PI / 180), s2 = Math.sin(ang * Math.PI / 180), P2 = (x, y) => `${(cx + x * c - y * s2).toFixed(1)} ${(cy + x * s2 + y * c).toFixed(1)}`;
+        const a = w / 2, b2 = h / 2;
+        return `M${P2(-a + r, -b2)}L${P2(a - r, -b2)}A${r} ${r} 0 0 1 ${P2(a, -b2 + r)}L${P2(a, b2 - r)}A${r} ${r} 0 0 1 ${P2(a - r, b2)}L${P2(-a + r, b2)}A${r} ${r} 0 0 1 ${P2(-a, b2 - r)}L${P2(-a, -b2 + r)}A${r} ${r} 0 0 1 ${P2(-a + r, -b2)}Z`;
+      };
+      let parS = 0, parT = 0;
+      gsap.ticker.add(() => {
+        if (Math.abs(P.par - parS) < .0004 || land.style.visibility === 'hidden') return;
+        const now = performance.now(), dt = Math.min(.05, (now - (parT || now)) / 1000 || .016); parT = now;
+        parS += (P.par - parS) * Math.min(1, dt * 3.2); render();
+      });
       const render = () => {
+        if (P.gone > .5 || P.show < .5 || P.reveal >= 1) { if (lrh) lrh.style.visibility = 'hidden'; }
         if (P.gone > .5 || P.show < .5) { land.style.visibility = 'hidden'; from0 = null; return; }
         land.style.visibility = 'visible';
         const lr = land.getBoundingClientRect(), cv = cover(lr), e = P.reveal;
-        if (e < 1 && w2svg) {
-          if (!from0 || e === 0) from0 = measure(lr);
+        if (e < 1 && !w2svg) {
+          // v2.10: the white rounded rhombus of v1 rises from below the screen turning on itself, settles in the
+          // centre and opens as a window until the landscape fills the screen
+          Object.assign(li.style, { left: cv.x + 'px', top: cv.y + 'px', width: cv.w + 'px', height: cv.h + 'px' });
+          const s0 = Math.min(lr.width, lr.height) * .175, ee = e;
+          const cx = lr.width / 2, cy = lerp(lr.height + s0 * 1.2, lr.height / 2, P.rise);
+          const ang = lerp(135, 0, P.rise);  // it turns as it rises and arrives upright, a square ready to open
+          const w = lerp(s0, lr.width * 1.06, ee), h = lerp(s0, lr.height * 1.06, ee), r = lerp(s0 * .19, 0, ee), b = lerp(s0 * .1, 0, Math.min(1, ee * 1.6));
+          land.style.clipPath = `path("${rrot(cx, cy, w - 2 * b, h - 2 * b, Math.max(0, r - b), ang)}")`;
+          if (lrh) { lrh.style.visibility = ee < .98 ? 'visible' : 'hidden'; Object.assign(lrh.style, { width: w + 'px', height: h + 'px', borderRadius: r + 'px', borderWidth: b + 'px', opacity: 1 - Math.max(0, (ee - .7) / .3), transform: `translate(${cx - w / 2}px, ${cy - h / 2}px) rotate(${ang}deg)` }); }
+        } else if (e < 1) {
+          if (!from0 || e === 0) from0 = w2svg ? measure(lr) : measure0(lr);
           const f = from0, im = { x: lerp(f.img.x, cv.x, e), y: lerp(f.img.y, cv.y, e), w: lerp(f.img.w, cv.w, e), h: lerp(f.img.h, cv.h, e) };
           Object.assign(li.style, { left: im.x + 'px', top: im.y + 'px', width: im.w + 'px', height: im.h + 'px' });
           const k1 = 1 - e, rad = f.rad * (e < .85 ? 1 : (1 - e) / .15);
@@ -522,7 +503,10 @@
           land.style.clipPath = 'none';
         }
         // parallax of the landscape through the act: it drifts up as you go deeper
-        li.style.transform = `translate3d(0, ${(-P.par * (cv.h - lr.height) * .45).toFixed(1)}px, 0)`;
+        // v2.13: the landscape follows the act's parallax value through a soft spring (it never starts or stops dead,
+        // whatever the pace of the step that moves it); a cut snaps it
+        if (CAP || RM || Math.abs(P.par - parS) > .35) parS = P.par;
+        li.style.transform = `translate3d(0, ${(-parS * (cv.h - lr.height) * .38).toFixed(1)}px, 0)`;
         if (P.hole > .5) {
           const r = win.getBoundingClientRect(), sc = r.width / (win.offsetWidth || 1);
           const rad = Math.min(parseFloat(getComputedStyle(win).borderTopLeftRadius) * sc || 0, r.width / 2, r.height / 2);
@@ -538,75 +522,107 @@
       addEventListener('resize', () => requestAnimationFrame(render));
 
       if (c.short) {
-        // landscape phones: the act is laid out as a column, no pin, the agenda changes part by part with its buttons
-        gsap.set([brief, agL], { autoAlpha: 1 }); pt.progress(1);
+        // landscape phones: the act is laid out as a column, no pin, the agenda changes day by day with its buttons
+        gsap.set([brief, objL, agL], { autoAlpha: 1 }); pt.progress(1);
         ready = true;
-        const go = (d, p) => { agSet(d, p); ph.forEach((im, j) => (im.style.opacity = j === p ? 1 : 0)); };
-        parts.forEach(t => t.addEventListener('click', () => go(dayOn, +t.dataset.part)));
-        days.forEach(t => t.addEventListener('click', () => go(+t.dataset.day, partOn)));
-        $$('[data-next]', agL).forEach(b => b.addEventListener('click', () => go(dayOn, (partOn + 1) % 4)));
-        $$('[data-prev]', agL).forEach(b => b.addEventListener('click', () => go(dayOn, (partOn + 3) % 4)));
+        const go = (d) => { agSet(d); ph.forEach((im, j) => (im.style.opacity = j === d ? 1 : 0)); };
+        days.forEach(t => t.addEventListener('click', () => go(+t.dataset.day)));
+        $$('[data-next]', agL).forEach(b => b.addEventListener('click', () => go((dayOn + 1) % 3)));
+        $$('[data-prev]', agL).forEach(b => b.addEventListener('click', () => go((dayOn + 2) % 3)));
       } else {
-        const n = 15, T1 = 3.75, AG = T1 + 2.1, STEP = 1.05;
-        const marks = [0, T1]; for (let kx = 0; kx < 12; kx++) marks.push(AG + kx * STEP); marks.push(AG + 11 * STEP + 2.0);
+        // v2: 0 cover · 1 boarding pass · 2 objectives · 3–5 agenda, one day each · 6 the window opens on the blue
+        const n = 7, T1 = 3.75, T2 = T1 + 2.6, AG = T2 + 2.3, STEP = 1.05;
+        const marks = [0, T1, T2, AG, AG + STEP, AG + 2 * STEP, AG + 2 * STEP + 2.0];
+        const AG0 = 3, AG1 = 5;
         const tl = gsap.timeline({ paused: true, onUpdate: render });
-        const heroTxt0 = $$('.ktt, .kbar, .sig, .hatch27, .lay-hero [data-a=cta]', S).filter(e => hero.contains(e));
+        const heroTxt0 = $$('.klab, .ktt, .kmeta, .sig, .lay-hero [data-a=cta]', S).filter(e => hero.contains(e));
         const heroTxt = heroTxt0.filter(e => !heroTxt0.some(o => o !== e && o.contains(e)));  // never animate a child and its parent
         const briefT = $('[data-a=t]', brief), op = $('[data-a=op]', brief), bsub = $('[data-a=sub]', brief);
+        const back = $('.pbk', brief);
+        const ohead = $('[data-a=ohead]', objL), objs = back ? $$('[data-a=obj]', back) : $$('[data-a=obj]', objL);
+        if (back) gsap.set(back, { autoAlpha: 0, transformPerspective: 1500 });
         const wrapL = c.mob ? agL : (agL.querySelector(':scope > div') || agL);
         const agKids = Array.from(wrapL.children).filter(e => !['STYLE', 'SCRIPT'].includes(e.tagName)).concat(c.mob ? [] : $$(':scope > .steps', agL));
-        gsap.set([brief, agL], { autoAlpha: 0 });
+        gsap.set([brief, objL, agL], { autoAlpha: 0 });
         gsap.set([pass, briefT].filter(Boolean), { autoAlpha: 0 });
-        // 0 → 1: the KV opens up around its central window; the window, frame and photo, grows to the whole screen
-        tl.fromTo(heroTxt, { autoAlpha: 1, y: 0 }, { autoAlpha: 0, y: 30, duration: .45, stagger: .03, ease: 'power2.in', immediateRender: false }, 0)
+        // 0 → 1: the cover's words leave; the landscape opens from a porthole in the middle until it fills the screen
+        tl.fromTo(heroTxt, { autoAlpha: 1, y: 0 }, { autoAlpha: 0, y: -24, duration: .5, stagger: .04, ease: 'power2.in', immediateRender: false }, 0)
           .to($$('.glow', hero), { autoAlpha: 0, duration: .3, ease: 'none' }, 0)
-          .to(kl('c295'), { xPercent: 45, yPercent: -70, autoAlpha: 0, duration: 1.1, ease: 'power2.in' }, .05)
-          .to(kl('cn235'), { xPercent: 80, yPercent: 60, autoAlpha: 0, duration: 1, ease: 'power2.in' }, .05)
-          .to(kl('rearL'), { xPercent: -90, autoAlpha: 0, duration: .9, ease: 'power2.in' }, .05)
-          .to(kl('rearR'), { xPercent: 90, autoAlpha: 0, duration: .9, ease: 'power2.in' }, .05)
-          .to(kl('win')[0], { xPercent: -70, autoAlpha: 0, duration: .9, ease: 'power2.in' }, .1)
-          .to(kl('win')[2], { xPercent: 70, autoAlpha: 0, duration: .9, ease: 'power2.in' }, .1)
-          // hand-over: the landscape takes the window's place pixel for pixel, the window itself is no longer needed
-          .to(P, { show: 1, duration: .001 }, .3)
-          .set(win2, { autoAlpha: 0 }, .302)
-          .to(P, { reveal: 1, duration: 1.9, ease: 'power2.inOut' }, .32)
-          .to(scrim, { opacity: 1, duration: 1.2, ease: 'power1.inOut' }, 1)
-          .set(hero, { autoAlpha: 0 }, 2.25)
+          .to(P, { show: 1, duration: .001 }, .25)
+          .fromTo(P, { rise: 0 }, { rise: 1, duration: 1.0, ease: 'power2.inOut', immediateRender: false }, .26)
+          .to(P, { reveal: 1, duration: 1.35, ease: 'power3.inOut' }, 1.2)
+          .to(scrim, { opacity: 1, duration: 1.2, ease: 'power1.inOut' }, 1.4)
+          .set(hero, { autoAlpha: 0 }, 2.4)
           // the boarding pass arrives on its own once the landscape is there
-          .set(brief, { autoAlpha: 1 }, 1.95)
-          .fromTo(briefT, { y: 30, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: .5, ease: 'power2.out', immediateRender: false }, 2.0)
-          .add(pt, 2.1);
+          .set(brief, { autoAlpha: 1 }, 2.15)
+          .fromTo(briefT, { y: 30, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: .5, ease: 'power2.out', immediateRender: false }, 2.2)
+          .add(pt, 2.3);
         // the landscape drifts a little at every step (parallax through the act)
-        tl.fromTo(P, { par: 0 }, { par: 1, duration: marks[13] - 2.25, ease: 'none', immediateRender: false }, 2.25);
-        // 1 → 2: the pass turns on itself, inwards; when it is edge-on the window takes over and finishes the turn,
-        // and the menus come in at its sides
+        tl.fromTo(P, { par: 0 }, { par: 1, duration: marks[AG1] - 2.25, ease: 'none', immediateRender: false }, 2.25);
+        // 1 → 2: the pass takes off (up and away, as the aircraft on it); the objectives come in one after another
+        tl.to([briefT, bsub].filter(Boolean), { y: -24, autoAlpha: 0, duration: .45, ease: 'power2.in' }, T1);
+        if (back) {
+          // 1 → 2 (laptop): the C295 flies off; the pass turns over and its back shows the four objectives
+          gsap.set(card, { transformPerspective: 1500 });
+          tl.to(op, { x: 340, y: -220, rotation: -6, autoAlpha: 0, duration: .9, ease: 'power2.in' }, T1)
+            .fromTo(card, { rotationY: 0 }, { rotationY: 90, duration: .6, ease: 'power2.in', immediateRender: false }, T1 + .15)
+            .set(card, { autoAlpha: 0 }, T1 + .75)
+            .fromTo(back, { rotationY: -90, autoAlpha: 1 }, { rotationY: 0, autoAlpha: 1, duration: .75, ease: 'power2.out', immediateRender: false }, T1 + .75)
+            .set(objL, { autoAlpha: 1 }, T1 + .6)
+            .fromTo(ohead, { y: 24, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: .7, ease: 'power3.out', immediateRender: false }, T1 + .65)
+            .fromTo($$('.osep', back), { scaleY: 0, transformOrigin: '50% 0%' }, { scaleY: 1, duration: .7, stagger: .08, ease: 'power2.out', immediateRender: false }, T1 + 1.2)
+            .fromTo($('.ofine', back), { autoAlpha: 0 }, { autoAlpha: 1, duration: .5, immediateRender: false }, T1 + 1.5);
+          // each objective comes in part by part: the disc pops, the number slides, the title, the rule and the copy follow.
+          // Every part is put in its starting state now, so nothing shows (and then blinks) while the card turns over
+          gsap.set($$('.osep', back), { scaleY: 0, transformOrigin: '50% 0%' }); gsap.set($('.ofine', back), { autoAlpha: 0 });
+          objs.forEach(ob => { gsap.set(ob, { autoAlpha: 1 }); gsap.set($('.oic', ob), { scale: .3, autoAlpha: 0 }); gsap.set($('.onum', ob), { x: 24, autoAlpha: 0 });
+            gsap.set([$('.ott', ob), $('.otx', ob)], { y: 14, autoAlpha: 0 }); gsap.set($('.obar', ob), { scaleX: 0, transformOrigin: '0% 50%' }); });
+          objs.forEach((ob, i) => { const at = T1 + 1.15 + i * .14;
+            tl.fromTo($('.oic', ob), { scale: .3, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: .55, ease: 'back.out(2)', immediateRender: false }, at)
+              .fromTo($('.onum', ob), { x: 24, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: .6, ease: 'power3.out', immediateRender: false }, at + .08)
+              .fromTo($('.ott', ob), { y: 14, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: .55, ease: 'power3.out', immediateRender: false }, at + .16)
+              .fromTo($('.obar', ob), { scaleX: 0, transformOrigin: '0% 50%' }, { scaleX: 1, duration: .5, ease: 'power3.out', immediateRender: false }, at + .26)
+              .fromTo($('.otx', ob), { y: 12, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: .55, ease: 'power3.out', immediateRender: false }, at + .3); });
+        } else {
+          tl.to(pass, { y: '-=120', x: '+=60', rotation: '-=4', autoAlpha: 0, duration: .9, ease: 'power2.in' }, T1 + .05)
+            .set(brief, { autoAlpha: 0 }, T1 + .96)
+            .set(objL, { autoAlpha: 1 }, T1 + .7)
+            .fromTo(ohead, { y: 24, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: .7, ease: 'power3.out', immediateRender: false }, T1 + .75)
+            .fromTo(objs, { y: 40, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: .8, stagger: .12, ease: 'power3.out', immediateRender: false }, T1 + 1.0);
+        }
+        // 2 → 3: the objectives clear; the window turns in and the menus come in at its sides
         const fr0 = frame.getBoundingClientRect(), fcx = fr0.left + fr0.width / 2, fcy = fr0.top + fr0.height / 2;
         const menus = agKids.filter(e => !e.contains(frame));
         const side = (e) => { const r = e.getBoundingClientRect(); return c.mob ? { y: (r.top + r.height / 2 < fcy ? -1 : 1) * 30 } : { x: (r.left + r.width / 2 < fcx ? -1 : 1) * 60 }; };
-        gsap.set(pass, { transformPerspective: 1500 });
         gsap.set(frame, { transformPerspective: 1500 });
-        tl.to(P, { flip: 1, duration: .001 }, T1)
-          .to([briefT, bsub].filter(Boolean), { y: -24, autoAlpha: 0, duration: .45, ease: 'power2.in' }, T1)
-          .fromTo(pass, { rotationY: 0, rotationX: 0 }, { rotationY: 90, rotationX: 0, duration: .75, ease: 'power2.in', immediateRender: false }, T1 + .05)
-          .set(agKids, { autoAlpha: 0 }, T1 + .79)
-          .set(agL, { autoAlpha: 1 }, T1 + .8)
-          .set(brief, { autoAlpha: 0 }, T1 + .8)
-          .fromTo(frame, { rotationY: -90, autoAlpha: 1 }, { rotationY: 0, autoAlpha: 1, duration: .85, ease: 'power2.out', immediateRender: false }, T1 + .8);
-        if (c.mob) tl.fromTo(agKids.filter(e => e.contains(frame)), { autoAlpha: 0 }, { autoAlpha: 1, duration: .01, immediateRender: false }, T1 + .8);
-        menus.forEach((e, j) => tl.fromTo(e, { ...side(e), autoAlpha: 0 }, { x: 0, y: 0, autoAlpha: 1, duration: .8, ease: 'power3.out', immediateRender: false }, T1 + 1.0 + j * .07));
-        tl.to(P, { flip: 0, duration: .001 }, T1 + 1.7);
-        // 2 … 13: twelve states, each one blind down, view changes, blind up
-        for (let kx = 0; kx < 11; kx++) {
-          const t = AG + kx * STEP, p0 = kx % 4, p1 = (kx + 1) % 4;
+        tl.to(P, { flip: 1, duration: .001 }, T2);
+        if (back) tl.to(ohead, { y: -20, autoAlpha: 0, duration: .45, ease: 'power2.in' }, T2)
+          // 2 → 3 (laptop): the second turn; where the front of the pass should come back, the window arrives
+          .fromTo(back, { rotationY: 0 }, { rotationY: 90, duration: .6, ease: 'power2.in', immediateRender: false }, T2 + .05)
+          .set(back, { autoAlpha: 0 }, T2 + .66)
+          .set(brief, { autoAlpha: 0 }, T2 + .66);
+        else tl.to([...objs].reverse(), { y: -20, autoAlpha: 0, duration: .45, stagger: .05, ease: 'power2.in' }, T2)
+          .to(ohead, { y: -20, autoAlpha: 0, duration: .45, ease: 'power2.in' }, T2 + .1);
+        tl
+          .set(objL, { autoAlpha: 0 }, T2 + .75)
+          .set(agKids, { autoAlpha: 0 }, T2 + .59)
+          .set(agL, { autoAlpha: 1 }, T2 + .6)
+          .fromTo(frame, { rotationY: -90, autoAlpha: 1 }, { rotationY: 0, autoAlpha: 1, duration: .85, ease: 'power2.out', immediateRender: false }, T2 + .6);
+        if (c.mob) tl.fromTo(agKids.filter(e => e.contains(frame)), { autoAlpha: 0 }, { autoAlpha: 1, duration: .01, immediateRender: false }, T2 + .6);
+        menus.forEach((e, j) => tl.fromTo(e, { ...side(e), autoAlpha: 0 }, { x: 0, y: 0, autoAlpha: 1, duration: .8, ease: 'power3.out', immediateRender: false }, T2 + .8 + j * .07));
+        tl.to(P, { flip: 0, duration: .001 }, T2 + 1.5);
+        // 3 … 5: three days, each one blind down, view changes, blind up
+        for (let kx = 0; kx < 2; kx++) {
+          const t = AG + kx * STEP;
           tl.to(sh, { height: '100%', duration: .46, ease: 'power2.inOut' }, t)
-            .to(ph[p0], { opacity: 0, duration: .14, ease: 'none' }, t + .36)
-            .fromTo(ph[p1], { opacity: 0, scale: 1.14 }, { opacity: 1, scale: 1, duration: .62, ease: 'power2.out', immediateRender: false }, t + .38)
+            .to(ph[kx], { opacity: 0, duration: .14, ease: 'none' }, t + .36)
+            .fromTo(ph[kx + 1], { opacity: 0, scale: 1.14 }, { opacity: 1, scale: 1, duration: .62, ease: 'power2.out', immediateRender: false }, t + .38)
             .to(sh, { height: rest, duration: .52, ease: 'power3.inOut' }, t + .48);
         }
-        // 13 → 14: blind down, the window now opens on the blue field, the window grows until the field is all there is
-        const tE = marks[13];
+        // 5 → 6: blind down, the window now opens on the blue field, the window grows until the field is all there is
+        const tE = marks[AG1];
         tl.to(sh, { height: '100%', duration: .45, ease: 'power2.inOut' }, tE)
-          .to(menus, { autoAlpha: 0, y: -20, duration: .36, stagger: .015, ease: 'power2.in' }, tE + .05)  // done before tE+.46 (see «Continuar»)
+          .to(menus, { autoAlpha: 0, y: -20, duration: .36, stagger: .015, ease: 'power2.in' }, tE + .05)  // done before tE+.46 (see «Continue»)
           .set(ph, { opacity: 0 }, tE + .46)
           .set(win, { backgroundColor: 'rgba(0,0,0,0)', boxShadow: 'none' }, tE + .46)
           // the bezel stays as a ring (inset shadow as wide as the padding), the inside of the frame becomes a hole
@@ -614,16 +630,15 @@
           .to(P, { hole: 1, duration: .01 }, tE + .46)
           .to(sh, { height: '0%', duration: .5, ease: 'power2.inOut' }, tE + .5)
           .to(frame, { scale: c.mob ? 9 : 7, duration: .95, ease: 'power3.in' }, tE + 1.0)
-          .to(P, { gone: 1, duration: .01 }, marks[14] - .02)
-          .set(agL, { autoAlpha: 0 }, marks[14] - .01);
-        if (tl.duration() < marks[14]) tl.set({}, {}, marks[14]);
+          .to(P, { gone: 1, duration: .01 }, marks[n - 1] - .02)
+          .set(agL, { autoAlpha: 0 }, marks[n - 1] - .01);
+        if (tl.duration() < marks[n - 1]) tl.set({}, {}, marks[n - 1]);
 
         let cur = -1;
-        const CH = (i) => (i === 0 ? 'Portada' : i === 1 ? 'Briefing' : 'Conference');
+        const CH = (i) => (i === 0 ? 'Cover' : i === 1 ? 'Briefing' : i === 2 ? 'Objectives' : 'Agenda');
         const mark = (i) => {
           if (i === cur) return; cur = i;
-          const kx = Math.max(0, Math.min(11, i - 2));
-          agSet(Math.floor(kx / 4), kx % 4);
+          agSet(Math.max(0, Math.min(2, i - AG0)));
           sec.dataset.ch = CH(i);
           const st = o.st; if (st && st.isActive) $('#chap').textContent = CH(i);
         };
@@ -647,8 +662,7 @@
         o.set = (i) => { if (o.tw) o.tw.kill(); o.q = 0; o.busy = false; o.drive = false; tl.time(marks[i]); o.at = i; mark(i); render(); };
         const after = () => { o.drive = false; o.busy = false; if (o.q) { const d = Math.sign(o.q); o.q -= d; const nx = o.at + d; if (nx >= 0 && nx < n) o.go(nx); else o.q = 0; } };
         const dur = (i) => clamp(Math.abs(marks[i] - tl.time()), .5, 3.2);
-        const AG0 = 2, AG1 = 13;
-        const mapEl = $('#s02b');
+        const mapEl = $('#s03a');
         const mapTop = () => (mapEl ? mapEl.getBoundingClientRect().top + scrollY : o.st.end + innerHeight);
         // move the page without anyone seeing it: same background (the field keeps its position), nothing in between
         const cut = (top) => {
@@ -672,12 +686,12 @@
           let done = 0; const fin = () => { if (++done === 2) after(); };
           // 7 nov: the landscape behind glides to its new height during the whole jump; the act's own time is set
           // under the blind, which would make it snap, so the gliding value is put back right after
-          const parTo = clamp((marks[i] - 2.25) / (marks[13] - 2.25), 0, 1);
+          const parTo = clamp((marks[i] - 2.25) / (marks[AG1] - 2.25), 0, 1);
           if (parTw) parTw.kill();
           parTw = gsap.to(P, { par: parTo, duration: 1.1, ease: 'power2.inOut', onUpdate: render });
           o.tw = gsap.timeline({ onComplete: fin })
             .to(sh, { height: '100%', duration: .45, ease: 'power2.inOut' })
-            .add(() => { const pv = P.par; tl.time(marks[i]); P.par = pv; render(); gsap.set(sh, { height: '100%' }); gsap.fromTo(ph[(i - AG0) % 4], { scale: 1.14 }, { scale: 1, duration: .7, ease: 'power2.out' }); })
+            .add(() => { const pv = P.par; tl.time(marks[i]); P.par = pv; render(); gsap.set(sh, { height: '100%' }); gsap.fromTo(ph[i - AG0], { scale: 1.14 }, { scale: 1, duration: .7, ease: 'power2.out' }); })
             .to(sh, { height: rest, duration: .55, ease: 'power3.inOut' }, '+=.04');
           scrollToY(o.pos(i), 1.0, fin);
         };
@@ -696,8 +710,7 @@
         ready = true;
         $$('[data-next]', agL).forEach(b => b.addEventListener('click', () => o.go(o.at + 1)));
         $$('[data-prev]', agL).forEach(b => b.addEventListener('click', () => o.go(o.at - 1)));
-        parts.forEach(t => t.addEventListener('click', () => o.go(2 + dayOn * 4 + +t.dataset.part)));
-        days.forEach(t => t.addEventListener('click', () => o.go(2 + +t.dataset.day * 4 + partOn)));
+        days.forEach(t => t.addEventListener('click', () => o.go(AG0 + +t.dataset.day)));
         // 7 nov · «Continuar»: from any agenda state straight into the exit to the blue (13 → 14), never through the
         // states in between. The menus leave and the blind drops; with the screen in that state the act is moved, in
         // the same frame, to the moment of its own exit where the blind is down, and plays the rest of it.
@@ -725,8 +738,8 @@
     window.__act = () => ACT;
 
 
-    /* ---------- 02 Location ---------- */
-    try {
+    /* ---------- 02 Location (removed in v2) ---------- */
+    if ($('#s02b')) try {
       const sec = $('#s02b'), S0 = stageOf(sec), view = $('.mview', S0);
       if (view) own([view]);
       if (!ACT2) enter(sec, (tl, S) => {
@@ -840,27 +853,22 @@
       }, null, 50, 1.15);
     } catch (err) { console.warn('03 Key points', err); }
 
-    /* ---------- 03 Claim (free scroll, scrubbed) ---------- */
+    /* ---------- 04.01 Creative concept, stacked (v2): the argument rises in; the key visual assembles when it arrives ---------- */
     if (!ACT2) try {
-      const sec = $('#s03b'), S = stageOf(sec);
-      const win = $('[data-a=cwin]', S), cin = $('[data-a=cin]', S), cout = $('[data-a=cout]', S);
-      own([win, cout]);
-      const sync = () => { const a = cout.getBoundingClientRect(), b = win.getBoundingClientRect(), kk = k(); cin.style.left = (a.left - b.left) / kk + 'px'; cin.style.top = (a.top - b.top) / kk + 'px'; };
-      const strip = $('.strip', win), pl = $('.cplane', S);
-      if (pl) own([pl]);
-      // played once when the scene arrives, never scrubbed backwards (6 nov): the window opens, the claim slides in,
-      // the C295 flies in and settles breaking the frame; it re-arms only when the scene is entirely below the screen
-      enter(sec, (tl) => {
-        const from = JSON.parse(win.dataset.from), to = JSON.parse(win.dataset.to), dx = +(cout.dataset.dx || 0);
-        if (RM) { tl.set(win, to).set(cout, { x: 0 }).add(sync); return; }
-        tl.fromTo(win, from, { ...to, duration: 1.5, ease: 'power3.inOut', onUpdate: sync, immediateRender: true }, 0)
-          .fromTo(cout, { x: dx }, { x: 0, duration: 1.5, ease: 'power3.inOut', onUpdate: sync, immediateRender: true }, 0);
-        if (pl) tl.fromTo(pl, { x: c.mob ? 260 : 520, y: c.mob ? 60 : 140, rotation: -7, opacity: 0 }, { x: 0, y: 0, rotation: 0, opacity: 1, duration: 2.2, ease: 'power2.out', immediateRender: true }, .5);
-      }, 'top 72%');
-      sync(); addEventListener('resize', sync);
-      // the landscape drifts through the glass with the scroll (a parallax, not an animation that plays back)
-      if (!RM && strip) gsap.fromTo(strip, { yPercent: 9, scale: 1.08 }, { yPercent: -9, scale: 1, ease: 'none', scrollTrigger: { trigger: sec, start: 'top bottom', end: 'bottom top', scrub: SCRUB } });
-    } catch (err) { console.warn('03 Claim', err); }
+      const sec = $('#s03b'), S = stageOf(sec), ckv = $('.ckv', S), kvb = ckv && $('[data-a=kv]', ckv);
+      if (kvb) {
+        const kvl = (q) => $$(`.kl[data-l=${q}]`, kvb), kvi = (q) => $$(`.kl[data-l=${q}] .ki`, kvb);
+        own([kvb]);
+        enter(ckv, (tl) => {
+          if (RM) { tl.from(kvb, { opacity: 0, duration: .2 }); return; }
+          tl.from(kvl('rearL'), { xPercent: -70, opacity: 0, duration: 1.2, ease: 'expo.out' }, 0)
+            .from(kvl('rearR'), { xPercent: 70, opacity: 0, duration: 1.2, ease: 'expo.out' }, 0)
+            .fromTo(kvi('win'), { clipPath: 'inset(48% 48% 48% 48% round 14px)', scale: .86, opacity: 0 }, { clipPath: 'inset(0% 0% 0% 0% round 0px)', scale: 1, opacity: 1, duration: 1.15, ease: 'expo.out', stagger: { each: .14, from: 'center' }, immediateRender: true }, .15)
+            .from(kvl('c295'), { xPercent: -38, yPercent: 34, rotation: -5, opacity: 0, duration: 1.5, ease: 'power3.out' }, .5)
+            .from(kvl('cn235'), { xPercent: 55, yPercent: -40, rotation: 7, opacity: 0, duration: 1.35, ease: 'power3.out' }, .75);
+        }, 'top 75%');
+      }
+    } catch (err) { console.warn('04.01 Concept', err); }
 
     /* ---------- 03 Digital (pinned, 6 pieces) ---------- */
     if (!ACT2) try {
@@ -868,7 +876,7 @@
       enter($('#s03c'), (tl, S) => {
         const brd = $('.dboard', S) || $$('[data-a=brow]', S)[0]?.closest('div');
         const rows = $$('[data-a=brow]', S), m0 = $$('[data-a=mock]', S).find(m => m.dataset.k === '0'), cells0 = rows[0] ? $$('[data-a=cell]', rows[0]) : [];
-        const head = $$('.dcol > h2, .dcol > p', S);
+        const head = $$('.dcol > .lab, .dcol .tha', S);
         own([brd, m0, ...head].filter(Boolean));
         if (RM) { tl.from([brd, m0, ...head].filter(Boolean), { opacity: 0, duration: .2 }); return; }
         if (has(head)) tl.from(head, { y: 30, opacity: 0, duration: .9, stagger: .1, ease: 'power3.out' }, 0);
@@ -894,25 +902,7 @@
       }, null, 50, 1.1);
     } catch (err) { console.warn('03 Digital', err); }
 
-    /* ---------- 04 Plano (pinned, 4 stops) ---------- */
-    if (!ACT2) try {
-      const pl = stepper($('#s04a'), 4, (tl, S) => {
-        const r = $('[data-a=iroute]', S), cards = $$('[data-a=scard]', S), F = r.dataset.f.split(',').map(Number);
-        for (let i = 0; i < 3; i++) {
-          tl.to(r, { attr: { 'stroke-dashoffset': 1 - F[i + 1] }, duration: .95, ease: 'sine.inOut' }, i)
-            .to(cards[i], { opacity: 0, y: -12, duration: .45, ease: 'power2.inOut' }, i + .2).fromTo(cards[i + 1], { y: 16 }, { opacity: 1, y: 0, duration: .55, ease: 'power3.out', immediateRender: false }, i + .4);
-        }
-      }, (i, S) => $$('[data-a=ipin]', S).forEach((p, j) => p.classList.toggle('on', j === i)), 50, 1.1);
-      if (pl.o) pl.o.jump = (from, to) => {
-        const r = $('[data-a=iroute]', pl.S), cards = $$('[data-a=scard]', pl.S), F = r.dataset.f.split(',').map(Number);
-        return gsap.timeline()
-          .to(r, { attr: { 'stroke-dashoffset': 1 - F[to] }, duration: 1, ease: 'sine.inOut' }, 0)
-          .to(cards[from], { opacity: 0, y: -12, duration: .4, ease: 'power2.in' }, 0)
-          .set(cards.filter((_, j) => j !== to), { opacity: 0 }, .4)
-          .fromTo(cards[to], { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: .6, ease: 'power3.out' }, .4);
-      };
-      $$('[data-a=ipin]', pl.S).forEach(p => p.addEventListener('click', () => pl.go(+p.dataset.k)));
-    } catch (err) { console.warn('04 Plano', err); }
+    /* ---------- 04.03 Implementation: stacked on mobile, no pin (v2) ---------- */
 
     /* ---------- 04 Plenaria (free scroll; arrows + drag rotate the curved gallery) ---------- */
     try {
@@ -972,27 +962,6 @@
       const sec = $('#s05');
       const fA = $('[data-a=friezeA]', sec), fB = $('[data-a=friezeB]', sec);
       A2X.soc = { fA, fB };
-      if (!ACT2) enter(sec, (tl, S) => {
-        const nap = own($('[data-a=napkin]', S)), posts = own($$('[data-a=post]', S));
-        if (RM) { tl.from([nap, ...posts, fA, fB].filter(Boolean), { opacity: 0, duration: .2 }); return; }
-        // the friezes are drawn along their length, from opposite sides, like ribbons being laid on the table
-        tl.fromTo(fA, { clipPath: 'inset(0% 100% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.6, ease: 'power2.inOut' }, 0)
-          .fromTo(fB, { clipPath: 'inset(0% 0% 0% 100%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.6, ease: 'power2.inOut' }, .15)
-          ;
-        // stickers: each card is laid from one corner to the opposite one, along the diagonal, and settles flat
-        const peel = (el, corner, at, d = 1.1) => {
-          const T = 320, C = { tl: [0, 0, 1, 1], tr: [100, 0, -1, 1], bl: [0, 100, 1, -1], br: [100, 100, -1, -1] }[corner];
-          const [x, y, sx, sy] = C, poly = (t) => `polygon(${x}% ${y}%, ${x + sx * t}% ${y}%, ${x}% ${y + sy * t}%)`;
-          const r0 = +gsap.getProperty(el, 'rotation') || 0;
-          tl.fromTo(el, { clipPath: poly(0), rotation: r0 + sx * sy * 3, scale: 1.04 }, { clipPath: poly(T), rotation: r0, scale: 1, duration: d, ease: 'power2.inOut', immediateRender: true }, at)
-            .set(el, { clearProps: 'clipPath' }, at + d);
-        };
-        peel(nap, 'tl', .3, 1.25);
-        posts.forEach((p, i) => {
-          const r = p.getBoundingClientRect(), left = r.left + r.width / 2 < innerWidth / 2, top = r.top + r.height / 2 < (S.getBoundingClientRect().top + S.getBoundingClientRect().height / 2);
-          peel(p, (top ? 't' : 'b') + (left ? 'l' : 'r'), .75 + i * .16, 1);
-        });
-      }, 'top 62%');
       if (!RM) {
         const S = stageOf(sec);
         // the friezes run sideways all the time, in opposite directions, as an endless band
@@ -1008,15 +977,41 @@
           if (ACT2) { tw.pause(); bw.pause(); A2X.loops.push([tw, 's05'], [bw, 's05']); }
           else ScrollTrigger.create({ trigger: sec, start: 'top bottom', end: 'bottom top', onToggle: st => { const on = st.isActive; [tw, bw].forEach(t => (on ? t.play() : t.pause())); } });
         });
-        if (!ACT2) $$('[data-a=post]', S).forEach((p, i) => gsap.to(p.firstElementChild, { y: [-14, 10, -8, 12][i % 4], ease: 'none', scrollTrigger: { trigger: sec, start: 'top top', end: 'bottom top', scrub: SCRUB } }));
       }
     } catch (err) { console.warn('05 Social event', err); }
+
+    /* ---------- 04.04 Contents: the LED screen plays the conference graphics in a loop (key visual, speaker title,
+       session card with its transition); the chips light up with what is on screen; the equaliser never stops ---------- */
+    try {
+      const sec = $('#s04c'), S = stageOf(sec);
+      if (sec && S && !RM && !ACT2) {
+        const l3 = $('.cl3', S), ses = $('.csess', S), wipe = $('.cwipe', S), chips = $$('.cchip', S), kvb = $('[data-a=kv]', S);
+        const on = (ks) => () => chips.forEach(c => c.classList.toggle('on', ks.includes(+c.dataset.c)));
+        const lp = gsap.timeline({ repeat: -1, paused: true, defaults: { ease: 'power3.out' } });
+        lp.add(on([0]), 0)
+          .fromTo($$('.kl[data-l=c295]', kvb), { y: 0 }, { y: -6, duration: 1.6, ease: 'sine.inOut', yoyo: true, repeat: 1 }, 0)
+          .add(on([1]), 3.2)
+          .fromTo(l3, { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: .7 }, 3.2)
+          .to(l3, { opacity: 0, x: -20, duration: .45, ease: 'power2.in' }, 6.0)
+          .add(on([2, 3]), 6.5)
+          .fromTo(wipe, { xPercent: 0 }, { xPercent: 380, duration: 1.0, ease: 'power2.inOut' }, 6.5)
+          .set(ses, { opacity: 1 }, 7.0)
+          .fromTo(Array.from(ses.children), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: .6, stagger: .1 }, 7.1)
+          .fromTo(wipe, { xPercent: 0 }, { xPercent: 380, duration: 1.0, ease: 'power2.inOut' }, 9.6)
+          .set(ses, { opacity: 0 }, 10.1)
+          .add(on([0]), 10.1)
+          .set({}, {}, 11);
+        const eq = gsap.to($$('.ceq i', S), { scaleY: () => .25 + Math.random() * .75, duration: .22, ease: 'none', repeat: -1, repeatRefresh: true, yoyo: true, stagger: { each: .06 }, paused: true });
+        if (ACT2) A2X.loops.push([lp, 's04c'], [eq, 's04c']);
+        else ScrollTrigger.create({ trigger: sec, start: 'top bottom', end: 'bottom top', onToggle: (self) => { self.isActive ? (lp.play(), eq.play()) : (lp.pause(), eq.pause()); } });
+      }
+    } catch (err) { console.warn('04.04 Contents', err); }
 
     /* ---------- 06 Organigrama ---------- */
     try {
       const sec = $('#s06'), S = stageOf(sec);
       const cards = own($$('[data-a=tcard]', S)), hs = own($$('[data-a=hs]', S));
-      own($$('.crewbg, .tlist, .cslot, svg.dr', S));
+      own($$('.crewbg, .mfh, .tlist, .cslot, svg.dr', S));
       let cur = 0, shown = false;
       const lineOf = (i) => $$('path.ln', S).find(l => +l.dataset.k === i);
       // the connector from the chosen point to the open card is drawn every time the choice changes
@@ -1046,7 +1041,7 @@
         if (has($$('.tlist .tab', S))) tl.from($$('.tlist .tab', S), { y: 16, opacity: 0, duration: .6, stagger: .07, ease: 'power3.out' }, 1.2);
         if (has($$('.cslot', S))) tl.from($$('.cslot', S), { y: 30, opacity: 0, duration: .8, ease: 'power3.out' }, 1.4);
         else if (has($$('[data-stack]', S))) tl.from($$('[data-stack]', S), { y: 30, opacity: 0, duration: .8, ease: 'power3.out' }, 1.2);
-        if (has($$('button.tab:not(.tl)[data-a=hs]', S))) tl.from($$('button.tab:not(.tl)[data-a=hs]', S), { y: 20, opacity: 0, duration: .6, stagger: .06, ease: 'power3.out' }, .8);
+        if (has($$('button.tab:not(.tl)[data-a=hs]', S))) tl.fromTo($$('button.tab:not(.tl)[data-a=hs]', S), { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: .6, stagger: .06, ease: 'power3.out', immediateRender: false }, .8);
       });
       // only the chosen team's card is open; the others are folded away in the same slot
       const pick = (i) => {
@@ -1095,7 +1090,25 @@
       // GSAP 3.12 rewinds a fromTo to the values its targets had BEFORE it, not to its "from": so every piece is put in
       // its starting state now, and jumping back (a cut to an earlier chapter, a re-arm) finds it there again
       const _ft = tl.fromTo.bind(tl);
-      tl.fromTo = (tg, from, to, at) => { if (tg !== root) gsap.set(tg, from); return _ft(tg, from, to, at); };
+      // v2.12: only the FIRST fromTo on an element (per property) sets its resting value: what the element shows before
+      // the act reaches it is the start of its earliest tween, never the start of a later one (that was making whole
+      // scenes appear, complete, for a frame before their entrance)
+      const INIT = new WeakMap();
+      tl.fromTo = (tg, from, to, at) => {
+        if (tg !== root) gsap.utils.toArray(tg).forEach(el => {
+          if (!el || typeof el !== 'object') return;
+          let done = INIT.get(el); if (!done) INIT.set(el, done = new Set());
+          const sub = {};
+          Object.keys(from).forEach(k => {
+            if (k === 'attr') { const a = {}; Object.keys(from.attr).forEach(ak => { if (!done.has('attr.' + ak)) { done.add('attr.' + ak); a[ak] = from.attr[ak]; } }); if (Object.keys(a).length) sub.attr = a; }
+            else if (['immediateRender', 'duration', 'ease', 'stagger', 'onUpdate', 'transformOrigin', 'svgOrigin'].includes(k)) sub[k] = from[k];
+            else if (!done.has(k)) { done.add(k); sub[k] = from[k]; }
+          });
+          ['duration', 'ease', 'stagger', 'onUpdate', 'immediateRender'].forEach(k => delete sub[k]);
+          if (Object.keys(sub).length) gsap.set(el, sub);
+        });
+        return _ft(tg, from, to, at);
+      };
       const marks = [], CHS = [];
       const chap = (id, steps) => CHS.push({ id, from: marks.length - 1, steps });  // called right after the chapter's first mark
       const layer = (id, on, at) => tl.set(Ly(id), { autoAlpha: on ? 1 : 0 }, at);
@@ -1103,27 +1116,7 @@
       const IMM = { immediateRender: false };
       const len1 = (els) => els.forEach(e => e.setAttribute('pathLength', 1));
 
-      /* ---- 0 · map: the city is drawn ---- */
-      const mS = Sg('s02b');
-      const osm = $$('svg.osm path', mS), fills = osm.filter(p => p.getAttribute('fill') !== 'none'), strokes = osm.filter(p => p.getAttribute('fill') === 'none').reverse();
-      const D = 1800;
-      osm.forEach(p => { const da = p.getAttribute('stroke-dasharray'); if (da) p.dataset.da = da; });
-      const mRoute = $$('[data-a=route]', mS), mPins = $$('[data-a=lpin]', mS), mLab = $$('.mview [data-ax]:not([data-a=lpin])', mS);
-      const mCol = $('.tcol', mS), mBits = $$('.mfr, .mzc, figure, .osmc', mS);
-      layer('s02b', 1, 0);
-      tl.fromTo(fills, { opacity: 0 }, { opacity: 1, duration: 1.2, ease: 'power1.inOut', ...IMM }, 0);
-      const sDraw = strokes.filter(p => !p.dataset.da), sFade = strokes.filter(p => p.dataset.da);
-      len1(sDraw);
-      sDraw.forEach((p, i) => tl.fromTo(p, { attr: { 'stroke-dasharray': '1 1', 'stroke-dashoffset': 1 } }, { attr: { 'stroke-dashoffset': 0 }, duration: 2.0, ease: 'power2.inOut', ...IMM }, .1 + i * .1));
-      tl.fromTo(sFade, { opacity: 0 }, { opacity: 1, duration: 1, ...IMM }, .8);
-      tl.fromTo(mRoute, { attr: { 'stroke-dashoffset': 1 } }, { attr: { 'stroke-dashoffset': 0 }, duration: 1.1, ...IMM }, 1.3)
-        .fromTo(mPins, { scale: .8, opacity: 0 }, { scale: 1, opacity: 1, duration: .7, stagger: .12, ...IMM }, 1.5)
-        .fromTo(mLab, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: .7, stagger: .06, ...IMM }, 1.8)
-        .fromTo(mCol ? Array.from(mCol.children) : [], { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: .9, stagger: .08, ...IMM }, .2)
-        .fromTo(mBits, { opacity: 0 }, { opacity: 1, duration: .8, stagger: .08, ease: 'power1.inOut', ...IMM }, 1.2);
-      marks.push(2.8); chap('s02b', 1);
-
-      /* ---- 0 → 1 · the map is undrawn, the compass is drawn clockwise across the screen ---- */
+      /* ---- 0 · vision (v2): act 1 has just opened on the blue field; the compass is drawn across the screen ---- */
       const kS = Sg('s03a'), nd = $('svg.nd', kS), dialBox = $('.dial > div', kS);
       const seg = $$('[data-a=seg]', kS), wp = $$('[data-a=wp]', kS), ring = $('[data-a=ring]', kS), wpl = $$('[data-a=wpl]', nd), ktxt = $$('text', nd).filter(e => !wpl.includes(e));
       const kshapes = $$('line, circle, path, polyline, rect', nd).filter(e => !e.matches('[data-a=seg], [data-a=wp], [data-a=ring]'));
@@ -1132,30 +1125,24 @@
       const cx = (e) => { const b = e.getBBox(); return b.x + b.width / 2; };
       kdraw.sort((a, b) => cx(a) - cx(b)); ktxt.sort((a, b) => cx(a) - cx(b));
       const kbox = $('.kbox', kS), kcards = $$('[data-a=kcard]', kS).sort((x, y) => x.dataset.k - y.dataset.k);
-      const kh = kcards.map(cd => cd.offsetHeight);
+      const kh = kcards.map(cd => cd.offsetHeight), KN = kcards.length;
       const khead = $$('h2, p.cap', kS).filter(e => !kbox.contains(e));
       gsap.set(kbox, { height: kh[0] + 54, overflow: 'hidden' });
       gsap.set(kcards.slice(1), { autoAlpha: 0 });
       gsap.set(seg.slice(1), { attr: { 'stroke-dashoffset': 1 } });
-      let t = marks[0];
-      tl.to(sDraw.slice().reverse(), { attr: { 'stroke-dashoffset': -1 }, duration: 1.0, stagger: { amount: .5 }, ease: 'power2.inOut' }, t)
-        .to(sFade, { opacity: 0, duration: .6, ease: 'sine.inOut' }, t)
-        .to(fills, { opacity: 0, duration: .9, ease: 'sine.inOut' }, t + .2)
-        .to([...mRoute, ...mPins, ...mLab, ...mBits], { opacity: 0, duration: .6 }, t)
-        .to(mCol ? Array.from(mCol.children) : [], { opacity: 0, y: -12, duration: .6, stagger: .05 }, t);
-      layer('s03a', 1, t + .7); layer('s02b', 0, t + 1.6);
-      tl.fromTo(kdraw, { attr: { 'stroke-dasharray': 1, 'stroke-dashoffset': 1 } }, { attr: { 'stroke-dashoffset': 0 }, duration: 1.5, stagger: { amount: 1.2 }, ease: 'sine.inOut', ...IMM }, t + .7)
-        .fromTo(ktxt, { opacity: 0 }, { opacity: 1, duration: .6, stagger: { amount: 1.1 }, ease: 'sine.inOut', ...IMM }, t + 1.1)
-        .fromTo(kdash, { opacity: 0 }, { opacity: 1, duration: .9, ease: 'sine.inOut', ...IMM }, t + 1.6)
-        .fromTo(dialBox, { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: .7, ...IMM }, t + 1.6)
-        .fromTo(seg[0], { attr: { 'stroke-dashoffset': 1 } }, { attr: { 'stroke-dashoffset': 0 }, duration: 1.0, ease: 'sine.inOut', ...IMM }, t + 2.0)
-        // 7 nov: only the departure (CONT) is on the dial at first; IDEA, DIGI and GIFT appear as their legs arrive
-        .fromTo([wp[0], ring], { opacity: 0, scale: .6, transformOrigin: '50% 50%' }, { opacity: 1, scale: 1, duration: .7, stagger: .1, ...IMM }, t + 2.1)
-        .fromTo(wpl[0], { opacity: 0 }, { opacity: 1, duration: .6, ...IMM }, t + 2.3)
-        .fromTo(khead, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: .8, stagger: .08, ...IMM }, t + 1.0)
-        .fromTo(kbox, { opacity: 0, x: -40, clipPath: 'inset(0% 0% 0% 0%)' }, { opacity: 1, x: 0, duration: 1.0, ease: 'power3.inOut', ...IMM }, t + 1.5);
-      t += 3.1; marks.push(t); chap('s03a', 4);
-      for (let i = 0; i < 3; i++) {
+      let t = 0;
+      layer('s03a', 1, 0);
+      tl.fromTo(kdraw, { attr: { 'stroke-dasharray': 1, 'stroke-dashoffset': 1 } }, { attr: { 'stroke-dashoffset': 0 }, duration: 1.5, stagger: { amount: 1.2 }, ease: 'sine.inOut', ...IMM }, t + .1)
+        .fromTo(ktxt, { opacity: 0 }, { opacity: 1, duration: .6, stagger: { amount: 1.1 }, ease: 'sine.inOut', ...IMM }, t + .5)
+        .fromTo(kdash, { opacity: 0 }, { opacity: 1, duration: .9, ease: 'sine.inOut', ...IMM }, t + 1.0)
+        .fromTo(dialBox, { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: .7, ...IMM }, t + 1.0)
+        .fromTo(seg[0], { attr: { 'stroke-dashoffset': 1 } }, { attr: { 'stroke-dashoffset': 0 }, duration: 1.0, ease: 'sine.inOut', ...IMM }, t + 1.4)
+        .fromTo([wp[0], ring], { opacity: 0, scale: .6, transformOrigin: '50% 50%' }, { opacity: 1, scale: 1, duration: .7, stagger: .1, ...IMM }, t + 1.5)
+        .fromTo(wpl[0], { opacity: 0 }, { opacity: 1, duration: .6, ...IMM }, t + 1.7)
+        .fromTo(khead, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: .8, stagger: .08, ...IMM }, t + .4)
+        .fromTo(kbox, { opacity: 0, x: -40, clipPath: 'inset(0% 0% 0% 0%)' }, { opacity: 1, x: 0, duration: 1.0, ease: 'power3.inOut', ...IMM }, t + .9);
+      t = 2.6; marks.push(t); chap('s03a', KN);
+      for (let i = 0; i < KN - 1; i++) {
         const bb = wp[i + 1].getBBox();
         tl.to(seg[i + 1], { attr: { 'stroke-dashoffset': 0 }, duration: 1.2 }, t)
           .to(ring, { attr: { cx: bb.x + bb.width / 2, cy: bb.y + bb.height / 2 }, duration: 1.2 }, t)
@@ -1167,170 +1154,403 @@
         t += 1.4; marks.push(t);
       }
 
-      /* ---- 4 → 5 · the compass is undrawn and the card closes; a rhombus rises from below the screen to its height
-              and turns into the concept window ---- */
-      const cS = Sg('s03b'), cz = $('.cz', cS), win = $('[data-a=cwin]', cS), cin = $('[data-a=cin]', cS), cout = $('[data-a=cout]', cS);
-      const strip = $('.strip', win), cpl = $('.cplane', cS), cps = $$(':scope > p:not([data-a])', cz);
-      // the inner copy follows the outer one; the scale is measured on the window itself, so it holds while the scene shrinks
-      const sync = () => { const a = cout.getBoundingClientRect(), b = win.getBoundingClientRect(), kk = (b.width / (win.offsetWidth || 1)) || k(); cin.style.left = (a.left - b.left) / kk + 'px'; cin.style.top = (a.top - b.top) / kk + 'px'; };
-      const to = JSON.parse(win.dataset.to), wcx = to.left + to.width / 2, wcy = to.top + to.height / 2, dx = +(cout.dataset.dx || 0);
+      /* ---- vision → creative concept: the compass is undrawn and the card closes; the argument is set ---- */
+      const cS = Sg('s03b'), carg = $('.carg', cS), ckv = $('.ckv', cS), alab = $('[data-a=alab]', cS), ah = $('.carg h2', cS), aps = $$('.carg p.ap, .carg p.cl', cS), mfds = $$('.carg .mfd', cS), scrs = $$('.carg .scr', cS), sbits = $$('.carg .scr > *', cS), hud = $('.carg .hud', cS), hudi = hud ? $$('i', hud) : [];
+      const kvb = $('[data-a=kv]', ckv), kvl = (q) => $$(`.kl[data-l=${q}]`, kvb), kvi = (q) => $$(`.kl[data-l=${q}] .ki`, kvb);
+      const cl1 = $('[data-a=cl1]', ckv), cl2 = $('[data-a=cl2]', ckv), kbar = $('.kbar', ckv), khat = $('.hatch27', ckv), kbad = $('[data-a=kbadge]', ckv);
+      gsap.set(ckv, { autoAlpha: 0 });
       tl.to(kdraw.slice().reverse(), { attr: { 'stroke-dashoffset': 1 }, duration: 1.0, stagger: { amount: .7 }, ease: 'sine.inOut' }, t)
         .to([...kdash, ...ktxt, ...seg, ...wp, ...wpl, ring, dialBox], { opacity: 0, duration: .7 }, t + .1)
         .to(kbox, { clipPath: 'inset(0% 0% 100% 0%)', duration: .8, ease: 'power3.inOut' }, t)
         .to(khead, { opacity: 0, y: -12, duration: .6 }, t + .1);
-      layer('s03b', 1, t + .9); layer('s03a', 0, t + 1.8);
-      tl.fromTo(win, { left: wcx - 70, top: 840, width: 140, height: 140, borderRadius: 26, rotation: 45, opacity: 1 },
-        { top: wcy - 70, rotation: 22, duration: 1.2, ease: 'power2.inOut', ...IMM }, t + .9)
-        .to(win, { ...to, rotation: 0, duration: 1.4, ease: 'power3.inOut', onUpdate: sync }, t + 1.95)
-        .fromTo(strip, { yPercent: 14, scale: 1.14 }, { yPercent: 0, scale: 1, duration: 2.6, ease: 'sine.inOut', ...IMM }, t + .9)
-        .fromTo(cin, { opacity: 0 }, { opacity: 1, duration: .5, ...IMM }, t + 3.0)
-        .fromTo(cout, { x: dx * .35, opacity: 0 }, { x: 0, opacity: 1, duration: 1.3, onUpdate: sync, ...IMM }, t + 2.3)
-        .fromTo(cps, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: .8, stagger: .1, ...IMM }, t + 3.0);
-      if (cpl) tl.fromTo(cpl, { x: 520, y: 140, rotation: -7, opacity: 0 }, { x: 0, y: 0, rotation: 0, opacity: 1, duration: 1.8, ...IMM }, t + 2.6);
-      t += 4.4; marks.push(t); chap('s03b', 1);
+      layer('s03b', 1, t + .8); layer('s03a', 0, t + 1.6);
+      tl.fromTo(alab, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: .6, ...IMM }, t + 1.0)
+        .fromTo(ah, { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 1.0, ease: 'power3.out', ...IMM }, t + 1.1)
+      if (mfds.length) {
+        /* glass cockpit: the three displays rise in their bezels, power on (a line opening to the full screen), then the readouts settle */
+        tl.fromTo(mfds, { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: .9, stagger: .12, ease: 'power3.out', ...IMM }, t + 1.35)
+          .fromTo(scrs, { clipPath: 'inset(49% 0% 49% 0% round 6px)' }, { clipPath: 'inset(0% 0% 0% 0% round 6px)', duration: .7, stagger: .12, ease: 'power3.inOut', ...IMM }, t + 1.75)
+          .fromTo(sbits, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: .5, stagger: .04, ease: 'power2.out', ...IMM }, t + 2.15)
+          .fromTo(hud, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .7, ease: 'power3.out', ...IMM }, t + 2.5)
+          .fromTo(hudi, { scaleY: 0 }, { scaleY: 1, duration: .7, ease: 'power3.out', transformOrigin: '50% 0%', ...IMM }, t + 2.6);
+        /* instrument loops, played only while the concept is on screen */
+        const ro = (sel, v) => { const n = $(sel, cS); if (!n) return; const tw = gsap.to(n, { ...v, svgOrigin: '0 0', paused: true }); A2X.loops.push([tw, 's03b']); };
+        ro('.carg .att', { rotation: 9, y: 6, duration: 3.2, ease: 'sine.inOut', repeat: -1, yoyo: true });
+        ro('.carg .rose', { rotation: -360, duration: 40, ease: 'none', repeat: -1 });
+        ro('.carg .sweep', { rotation: 360, duration: 4, ease: 'none', repeat: -1 });
+      } else tl.fromTo(aps, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: .8, stagger: .12, ease: 'power3.out', ...IMM }, t + 1.5);
+      t += 3.4; marks.push(t); chap('s03b', 2);
 
-      /* ---- 5 → 6 · the concept screen becomes the picture of the mail banner: it gets its night backdrop (invisible
-              on the night page), shrinks and rounds while the page turns to day, and lands on the banner's picture; the
-              white card of the banner then appears around it ---- */
+      /* ---- argument → key visual: the words clear and the KV assembles, windows first, then the two aircraft ---- */
+      // the displays switch off (the picture shrinks to a line) and the bezels fold shut, all gone before the KV comes
+      if (mfds.length) tl.to(hud, { opacity: 0, y: -10, duration: .35, ease: 'power2.in' }, t)
+        .to([...scrs].reverse(), { clipPath: 'inset(50% 0% 50% 0% round 6px)', duration: .3, stagger: .04, ease: 'power3.in' }, t)
+        .to([...mfds].reverse(), { scaleY: 0, opacity: 0, transformOrigin: '50% 50%', duration: .32, stagger: .04, ease: 'power3.in' }, t + .22);
+      else tl.to([...aps].reverse(), { opacity: 0, y: -16, duration: .5, stagger: .06, ease: 'power2.in' }, t);
+      tl
+        .to([ah, alab], { opacity: 0, y: -20, duration: .55, ease: 'power2.in' }, t + .15)
+        .set(ckv, { autoAlpha: 1 }, t + .6)
+        .fromTo(kvl('rearL'), { xPercent: -70, opacity: 0 }, { xPercent: 0, opacity: 1, duration: 1.2, ease: 'expo.out', ...IMM }, t + .65)
+        .fromTo(kvl('rearR'), { xPercent: 70, opacity: 0 }, { xPercent: 0, opacity: 1, duration: 1.2, ease: 'expo.out', ...IMM }, t + .65)
+        .fromTo(kvi('win'), { clipPath: 'inset(48% 48% 48% 48% round 14px)', scale: .86, opacity: 0 }, { clipPath: 'inset(0% 0% 0% 0% round 0px)', scale: 1, opacity: 1, duration: 1.15, ease: 'expo.out', stagger: { each: .14, from: 'center' }, ...IMM }, t + .8)
+        .fromTo(kvl('c295'), { xPercent: -38, yPercent: 34, rotation: -5, opacity: 0 }, { xPercent: 0, yPercent: 0, rotation: 0, opacity: 1, duration: 1.5, ease: 'power3.out', ...IMM }, t + 1.15)
+        .fromTo(kvl('cn235'), { xPercent: 55, yPercent: -40, rotation: 7, opacity: 0 }, { xPercent: 0, yPercent: 0, rotation: 0, opacity: 1, duration: 1.35, ease: 'power3.out', ...IMM }, t + 1.4)
+        .fromTo([cl1, cl2], { yPercent: 60, opacity: 0 }, { yPercent: 0, opacity: 1, duration: .8, stagger: .12, ease: 'power3.out', ...IMM }, t + 1.6)
+        .fromTo(kbar, { scaleX: 0, transformOrigin: '0% 50%' }, { scaleX: 1, duration: .7, ease: 'power3.out', ...IMM }, t + 1.85)
+        .fromTo(khat, { clipPath: 'inset(0% 100% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: .9, ease: 'power2.out', ...IMM }, t + 1.9)
+        .fromTo(kbad, { scale: .8, rotation: -20, opacity: 0 }, { scale: 1, rotation: 0, opacity: 1, duration: 1.1, ease: 'power3.out', ...IMM }, t + 1.9);
+      t += 3.2; marks.push(t);
+
+      /* ---- key visual → touchpoints: the KV steps back as the page turns to day; the first piece comes in ---- */
       const dS = Sg('s03c'), mocks = $$('[data-a=mock]', dS), rows = $$('[data-a=brow]', dS);
-      const brd = $('.dboard', dS) || (rows[0] && rows[0].closest('ol').parentElement), dhead = $$('.dcol > h2, .dcol > p', dS);
-      const m0card = mocks[0].firstElementChild.firstElementChild;
-      const pic = $$('div', m0card).find(d => d.style.height === '187px') || m0card;
-      const sr = dS.getBoundingClientRect(), mr = pic.getBoundingClientRect(), kk0 = sr.width / 1440;
-      const B = { x: (mr.left - sr.left) / kk0, y: (mr.top - sr.top) / kk0, w: mr.width / kk0, h: mr.height / kk0 };
-      const sc = B.w / 1440, crop = Math.max(0, (800 - B.h / sc) / 2);
+      const brd = $('.dboard', dS) || (rows[0] && rows[0].closest('ol').parentElement);
+      const tha = $('.tha', dS), thb = $('.thb', dS), tpb = $('.tpb', dS), dlab = $('.dcol > .lab', dS);
       const ON = { background: '#243a5e', boxShadow: 'inset 4px 0 0 #9fd0ff' }, OFF = { background: 'rgba(0,0,0,0)', boxShadow: 'inset 0 0 0 #9fd0ff' };
       gsap.set(rows[0], ON); rows.forEach((r, i) => { if (i) gsap.set($$('[data-a=cell]', r), { opacity: .35, color: 'rgba(255,255,255,0)' }); });
       gsap.set(mocks.slice(1), { opacity: 0 });
-      const czL = Ly('s03b');
-      // 7 nov: the banner keeps the horizon and the road. The scene carries its own copy of the field (same flight,
-      // same moment), which takes over from the page's as the backdrop turns opaque, and keeps flying inside the banner
-      const czc = document.createElement('canvas'), CR = Math.min(2, devicePixelRatio || 1);
-      czc.className = 'czf'; czc.setAttribute('aria-hidden', 'true'); czc.width = 1440 * CR; czc.height = 800 * CR;
-      Object.assign(czc.style, { position: 'absolute', left: 0, top: 0, width: '1440px', height: '800px', opacity: 0, pointerEvents: 'none' });
-      cz.prepend(czc);
-      const czg = czc.getContext('2d');
-      gsap.ticker.add(() => { if (+czc.style.opacity > 0 && czL.style.visibility !== 'hidden' && window.__field) window.__field.paint(czg, 1440, 800, CR, false, FIELD.s03b); });
-      tl.fromTo(cz, { backgroundColor: 'rgba(0,28,59,0)' }, { backgroundColor: NIGHT, duration: .6, ease: 'sine.inOut', ...IMM }, t)
-        .fromTo(czc, { opacity: 0 }, { opacity: 1, duration: .6, ease: 'sine.inOut', ...IMM }, t)
-        .set(czL, { zIndex: 3, pointerEvents: 'none' }, t)
-        // the small copy of the concept does not belong in a mail banner: it fades out as the scene shrinks
-        .to(cps, { opacity: 0, duration: .7, ease: 'sine.inOut' }, t + .2)
-        // the banner's own picture (with its own claim) stays hidden: the shrunk scene IS its picture
-        .set(pic, { opacity: 0 }, t)
-        .fromTo(cz, { x: 0, y: 0, scale: 1, clipPath: 'inset(-60% -60% -60% -60% round 0px)' },
-          { x: B.x, y: B.y - crop * sc, scale: sc, clipPath: `inset(${crop.toFixed(1)}px 0px ${crop.toFixed(1)}px 0px round ${(4 / sc).toFixed(1)}px)`, duration: 1.8, ease: 'power3.inOut', ...IMM }, t + .3)
-        .fromTo(root, { '--c-bg': NIGHT }, { '--c-bg': SKY, duration: 1.4, ease: 'power2.inOut', ...IMM }, t + .6);
-      layer('s03c', 1, t + .8);
-      tl.fromTo(dhead, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: .9, stagger: .1, ...IMM }, t + 1.2)
-        .fromTo(brd, { clipPath: 'inset(0% 0% 100% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.0, ...IMM }, t + 1.3)
-        .fromTo(rows, { opacity: 0, x: -14 }, { opacity: 1, x: 0, duration: .6, stagger: .06, ...IMM }, t + 1.5)
-        .fromTo($$('[data-a=cell]', rows[0]), { rotationX: -90, opacity: .2 }, { rotationX: 0, opacity: 1, duration: .45, stagger: { amount: .3 }, ...IMM }, t + 1.9)
-        .fromTo(mocks[0], { opacity: 0, y: 0 }, { opacity: 1, duration: .6, ...IMM }, t + 2.0);
+      /* v2.7: the central window of the KV grows into the landscape that carries the touchpoints */
+      const tland = $('.tland', Ly('s03c')), tli = tland && $('img', tland), tsc = tland && $('i', tland), tpa = $('.tpa', dS);
+      const w2 = kvi('win')[1], w2pi = w2 && $('.pi', w2), Q = { e: 0, par: 0 }, QP = { x: 0, y: 0 };
+      let q0 = null;
+      const qnum = (el, k) => (el.dataset[k] || '').split(' ').map(Number);
+      const qcover = (lr) => { const w = Math.max(lr.width, lr.height * 1.5) * 1.12, h = w / 1.5; return { x: (lr.width - w) / 2, y: (lr.height - h) / 2, w, h }; };
+      const qmeasure = (lr) => {
+        const fr = w2.getBoundingClientRect(), [vw] = qnum(w2, 'vb'), [fx, fy, fw, fh] = qnum(w2, 'full'), [, , iw] = qnum(w2, 'img');
+        const pr = w2pi.getBoundingClientRect(), [ix, iy] = qnum(w2, 'img'), su = pr.width / iw;
+        return { fr: { l: fr.left - lr.left, t: fr.top - lr.top, r: lr.right - fr.right, b: lr.bottom - fr.bottom }, rad: (+w2.dataset.r || 0) * fr.width / vw,
+                 img: { x: pr.left - lr.left + (fx - ix) * su, y: pr.top - lr.top + (fy - iy) * su, w: fw * su, h: fh * su } };
+      };
+      const qrender = () => {
+        if (!tland || !w2 || !w2pi) return;
+        const vis = Q.e > 0 && Ly('s03c').style.visibility !== 'hidden';
+        if (!vis) { if (tland.style.visibility !== 'hidden') tland.style.visibility = 'hidden'; q0 = null; return; }
+        tland.style.visibility = 'visible';
+        const lr = tland.getBoundingClientRect(), cv = qcover(lr), e = Q.e;
+        if (tsc) tsc.style.opacity = (e * e).toFixed(3);
+        if (e < 1) {
+          if (!q0) q0 = qmeasure(lr);
+          const f = q0, L = (a, b) => a + (b - a) * e, k1 = 1 - e, rad = f.rad * (e < .85 ? 1 : (1 - e) / .15);
+          Object.assign(tli.style, { left: L(f.img.x, cv.x) + 'px', top: L(f.img.y, cv.y) + 'px', width: L(f.img.w, cv.w) + 'px', height: L(f.img.h, cv.h) + 'px' });
+          tland.style.clipPath = `inset(${(f.fr.t * k1).toFixed(2)}px ${(f.fr.r * k1).toFixed(2)}px ${(f.fr.b * k1).toFixed(2)}px ${(f.fr.l * k1).toFixed(2)}px round ${rad.toFixed(2)}px)`;
+        } else {
+          q0 = null;
+          Object.assign(tli.style, { left: cv.x + 'px', top: cv.y + 'px', width: cv.w + 'px', height: cv.h + 'px' });
+          tland.style.clipPath = 'none';
+        }
+        // parallax: the landscape drifts up through the six pieces and follows the pointer a little
+        const rng = (cv.h - lr.height) / 2;
+        // (the drift only applies once the window has opened: during the growth the photo stays exactly where the KV shows it)
+        const ee = e * e;
+        tli.style.transform = `translate3d(${(QP.x * ee).toFixed(1)}px, ${(((.5 - Q.par) * rng * .9 + QP.y) * ee).toFixed(1)}px, 0)`;
+      };
+      if (tland && !CAP && matchMedia('(hover: hover) and (pointer: fine)').matches) {
+        const qx = gsap.quickTo(QP, 'x', { duration: 1.2, ease: 'power3.out' }), qy = gsap.quickTo(QP, 'y', { duration: 1.2, ease: 'power3.out' });
+        addEventListener('pointermove', (ev) => { qx(-(ev.clientX / innerWidth - .5) * 30); qy(-(ev.clientY / innerHeight - .5) * 18); });
+      }
+      if (tland) gsap.ticker.add(qrender);
+      tl.to([kbad, khat, kbar, cl2, cl1], { opacity: 0, y: -14, duration: .5, stagger: .05, ease: 'power2.in' }, t)
+        .to(kvl('c295'), { xPercent: -24, yPercent: -10, opacity: 0, duration: .7, ease: 'power2.in' }, t)
+        .to(kvl('cn235'), { xPercent: 30, yPercent: 12, opacity: 0, duration: .7, ease: 'power2.in' }, t);
+      layer('s03c', 1, t + .5);
+      tl.fromTo(Q, { e: 0 }, { e: 1, duration: 1.5, ease: 'power3.inOut', ...IMM }, t + .6)
+        .fromTo(tland, { opacity: 1 }, { opacity: 1, duration: .01, ...IMM }, t + .5);
+      layer('s03b', 0, t + 2.05);
+      const tpp = [tpa].filter(Boolean);
+      tl.fromTo([dlab, tha].filter(Boolean), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: .9, stagger: .1, ...IMM }, t + 1.9)
+        .fromTo(tpp, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: .9, ...IMM }, t + 2.1)
+        .fromTo(brd, { clipPath: 'inset(0% 0% 100% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.0, ...IMM }, t + 2.1)
+        .fromTo(rows, { opacity: 0, x: -14 }, { opacity: 1, x: 0, duration: .6, stagger: .06, ...IMM }, t + 2.3)
+        .fromTo($$('[data-a=cell]', rows[0]), { rotationX: -90, opacity: .2 }, { rotationX: 0, opacity: 1, duration: .45, stagger: { amount: .3 }, ...IMM }, t + 2.7)
+        .fromTo(mocks[0], { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: .8, ease: 'power3.out', ...IMM }, t + 2.4);
+      t += .8;
       t += 3.0; marks.push(t); chap('s03c', 6);
       for (let i = 0; i < 5; i++) {
-        // the first piece leaves with the key visual it carries
-        if (i === 0) { tl.to(cz, { y: '-=24', opacity: 0, duration: .55 }, t); layer('s03b', 0, t + .56); }
+        tl.fromTo(Q, { par: i / 5 }, { par: (i + 1) / 5, duration: 1.1, ease: 'power2.inOut', ...IMM }, t);
         tl.to(mocks[i], { y: -24, opacity: 0, duration: .55 }, t)
           .fromTo(mocks[i + 1], { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: .65, ...IMM }, t + .3)
           .fromTo($$('[data-a=cell]', rows[i + 1]), { rotationX: -90 }, { opacity: 1, rotationX: 0, color: '#ffffff', duration: .45, stagger: { amount: .25 }, ...IMM }, t + .3)
           .to(rows[i], { ...OFF, duration: .3 }, t + .3).to(rows[i + 1], { ...ON, duration: .3 }, t + .35);
+        // from the printed pieces to the digital ones, the heading and its line change with them
+        if (i === 2) tl.to([tha, tpa].filter(Boolean), { opacity: 0, y: -10, duration: .45, ease: 'power2.in' }, t)
+          .fromTo(thb, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: .6, ease: 'power2.out', ...IMM }, t + .35)
+          .fromTo(tpb, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: .6, ease: 'power2.out', ...IMM }, t + .45);
         t += 1.1; marks.push(t);
       }
 
-      /* ---- 11 → 12 · the board closes, the rest fades; the venue rhombus is drawn and the plan builds up ---- */
-      const sS = Sg('s04a'), iso = $('svg', sS), gGrid = $('[data-iso=grid]', iso), gFloor = $('[data-iso=floor]', iso), gObj = $$('[data-iso=obj]', iso), gRoute = $('[data-iso=route]', iso);
-      const rhomb = gFloor ? $$('polygon', gFloor).pop() : null, floorSides = gFloor ? $$('polygon', gFloor).slice(0, -1) : [];
-      const iroute = $('[data-a=iroute]', sS), F = iroute.dataset.f.split(',').map(Number), scards = $$('[data-a=scard]', sS), ipins = $$('[data-a=ipin]', sS);
-      const shead = $$('h2, h2 + p', sS), sbg = $('.sbg', sS), ilegs = $$('[data-a=ileg]', sS), ilegBox = $('.ileg', sS);
-      if (rhomb) len1([rhomb]);
-      gsap.set(scards.slice(1), { opacity: 0 });
+      /* ---- touchpoints → location: the board closes; the hotel turns in from the right, already curved ---- */
+      const pS = Sg('s04b'), P = A2X.ple, phead = $$('p.lab, h2, p.lp1', pS), pcap = $('.pcap', pS);
       tl.to(brd, { clipPath: 'inset(0% 0% 100% 0%)', duration: .8, ease: 'power3.inOut' }, t)
-        .to([...mocks, ...dhead, ...$$('[data-a=mock] ~ *, .dcol ~ p, .dcap', dS)], { opacity: 0, duration: .6 }, t + .1);
-      layer('s04a', 1, t + .7); layer('s03c', 0, t + 1.2);
-      tl.fromTo(gGrid, { opacity: 0 }, { opacity: 1, duration: .9, ease: 'sine.inOut', ...IMM }, t + .7);
-      if (rhomb) tl.fromTo(rhomb, { attr: { 'stroke-dasharray': 1, 'stroke-dashoffset': 1 }, fillOpacity: 0 }, { attr: { 'stroke-dashoffset': 0 }, duration: 1.1, ease: 'sine.inOut', ...IMM }, t + .7)
-        .to(rhomb, { fillOpacity: 1, duration: .6 }, t + 1.6)
-        .fromTo(floorSides, { opacity: 0 }, { opacity: 1, duration: .6, ...IMM }, t + 1.6);
-      tl.fromTo(gObj, { opacity: 0, y: -14 }, { opacity: 1, y: 0, duration: .7, stagger: .08, ...IMM }, t + 1.8)
-        .fromTo(gRoute, { opacity: 0 }, { opacity: 1, duration: .6, ...IMM }, t + 2.4)
-        .fromTo(iroute, { attr: { 'stroke-dashoffset': 1 } }, { attr: { 'stroke-dashoffset': 1 - F[0] }, duration: .9, ...IMM }, t + 2.5)
-        .fromTo(ipins, { opacity: 0, scale: .8 }, { opacity: 1, scale: 1, duration: .7, stagger: .08, ...IMM }, t + 2.6)
-        .fromTo(sbg, { opacity: 0, x: 60 }, { opacity: 1, x: 0, duration: 1.0, ease: 'power3.inOut', ...IMM }, t + 1.6)
-        .fromTo(scards[0], { opacity: 0, x: 60 }, { opacity: 1, x: 0, duration: 1.0, ease: 'power3.inOut', ...IMM }, t + 1.75)
-        .fromTo(ilegBox, { opacity: 0, x: 60 }, { opacity: 1, x: 0, duration: 1.0, ease: 'power3.inOut', ...IMM }, t + 1.85)
-        .fromTo(shead, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: .9, stagger: .1, ...IMM }, t + 1.2);
-      t += 3.4; marks.push(t); chap('s04a', 4);
-      for (let i = 0; i < 3; i++) {
-        tl.to(iroute, { attr: { 'stroke-dashoffset': 1 - F[i + 1] }, duration: 1.1 }, t)
-          .to(scards[i], { opacity: 0, y: -8, duration: .45, ease: 'power2.in' }, t + .1).fromTo(scards[i + 1], { opacity: 0, y: 12, x: 0 }, { opacity: 1, y: 0, duration: .65, ease: 'power2.out', ...IMM }, t + .5);
-        t += 1.3; marks.push(t);
-      }
-
-      /* ---- 15 → 16 · the plan is undrawn, the card closes; the gallery turns in from the right, already curved ---- */
-      const pS = Sg('s04b'), P = A2X.ple, phead = $$('h2', pS), pcap = $('.pcap', pS);
-      tl.to([...gObj].reverse(), { opacity: 0, y: -10, duration: .5, stagger: .04 }, t)
-        .to([gRoute, ...ipins], { opacity: 0, duration: .5 }, t)
-        .to([sbg, ...scards, ilegBox], { clipPath: 'inset(0% 0% 0% 100%)', duration: .9, ease: 'power3.inOut' }, t)
-        .to(shead, { opacity: 0, y: -12, duration: .6 }, t + .1);
-      if (rhomb) tl.to(rhomb, { attr: { 'stroke-dashoffset': 1 }, fillOpacity: 0, duration: .8, ease: 'sine.inOut' }, t + .5);
-      tl.to([...floorSides, gGrid], { opacity: 0, duration: .6 }, t + .7);
-      layer('s04b', 1, t + 1.1); layer('s04a', 0, t + 1.5);
-      tl.fromTo(P.st, { off: -4.6, alpha: 1, k: 1 }, { off: 0, alpha: 1, k: 1, duration: 2.6, ease: 'power3.out', onUpdate: P.place, ...IMM }, t + 1.0)
-        .fromTo(phead, { opacity: 0, y: -14 }, { opacity: 1, y: 0, duration: .8, ...IMM }, t + 1.4)
-        .fromTo(pcap, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .8, ...IMM }, t + 2.4);
+        .to([...mocks, ...$$('.dcol > :not(.dboard)', dS), ...$$('.tpp', dS)], { opacity: 0, duration: .6 }, t + .1)
+        .to(tland, { opacity: 0, duration: 1.0, ease: 'power2.inOut' }, t + .3)
+        .fromTo(root, { '--c-bg': NIGHT }, { '--c-bg': SKY, duration: 1.1, ease: 'power2.inOut', ...IMM }, t + .3);
+      layer('s04b', 1, t + .9); layer('s03c', 0, t + 1.3);
+      tl.fromTo(P.st, { off: -4.6, alpha: 1, k: 1 }, { off: 0, alpha: 1, k: 1, duration: 2.6, ease: 'power3.out', onUpdate: P.place, ...IMM }, t + .8)
+        .fromTo(phead, { opacity: 0, y: -14 }, { opacity: 1, y: 0, duration: .8, stagger: .08, ...IMM }, t + 1.1)
+        .fromTo(pcap, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .8, ...IMM }, t + 2.2);
       t += 3.5; marks.push(t); chap('s04b', 1);
 
-      /* ---- 16 → 17 · the gallery keeps turning the same way as it leaves; night; the social event deals its cards ---- */
-      const soS = Sg('s05'), nap = $('[data-a=napkin]', soS), posts = $$('[data-a=post]', soS), fA = A2X.soc.fA, fB = A2X.soc.fB;
-      // the drum turns away (same way it came in) and folds in on itself as it fades, render by render
+      /* ---- location → implementation (v2, 10 nov): the hotel turns away the same way; the overview map is unrolled ---- */
+      const sS = Sg('s04a'), ipans = $$('.ipan', sS).sort((a, b) => a.dataset.k - b.dataset.k), imap = $('.imap', sS), iscr = $('.iscr', sS);
+      const CAM = JSON.parse(imap.dataset.cam || '[]'), ZK = ['welcome', 'room', 'wg', 'mkt'];
+      const ileg = $('.ileg', sS), ilbs = $$('.ilb', imap), izs = $$('.iz', imap), iexs = $$('.iex, .iwc', imap), ipins = $$('.ipin', imap);
+      const iouts = $$('.iout path, .ilines path', imap), islab = $('.islab', imap);
+      const zg = (k) => $(`.iz[data-z=${k}]`, imap), ztop = (k) => { const g = zg(k); return g ? $('.izt', g) : null; };
+      const ibox = $('.ibox', sS), IH = [0, ...ipans.slice(1).map(p2 => { const it = $('.itx', p2); return it ? it.offsetHeight : 400; })];
+      const IP = (k) => { const p2 = ipans[k]; return { itx: $('.itx', p2), ivm: $('.ivm', p2), ivt: $('.ivt', p2), ild: $('.ild', p2), lds: $$('.ild path', p2), ldc: $$('.ild circle', p2) }; };
+      const PX = 752, PY = 128, PW = 640, PH = 360, TX = 640, TY = 662, SHUT = { scale: .06, x: TX - (PX + PW / 2), y: TY - (PY + PH / 2), opacity: 0 };
+      gsap.set(ipans.slice(1), { opacity: 0 });
+      gsap.set(imap, { x: 0, y: 0, scale: 1 });
       tl.to(P.st, { off: 4.6, duration: 2.0, ease: 'power2.in', onUpdate: P.place }, t)
-        .to([...phead, pcap], { opacity: 0, duration: .6 }, t)
-        .fromTo(root, { '--c-bg': SKY }, { '--c-bg': NIGHT, duration: 1.3, ease: 'power2.inOut', ...IMM }, t + .9);
-      layer('s05', 1, t + 1.75); layer('s04b', 0, t + 2.05);
+        .to([...phead, pcap], { opacity: 0, duration: .6 }, t);
+      layer('s04a', 1, t + 1.2); layer('s04b', 0, t + 2.05);
+      const tp = t + .8;
+      // the overview map is drawn: the floor's outline and its inner lines, then the slab, the zones rise one by one,
+      // the exits and toilets appear and each pin drops with its name
+      tl.fromTo(Array.from(ipans[0].children), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: .9, stagger: .1, ...IMM }, tp + .9)
+        .fromTo(iouts, { attr: { 'stroke-dasharray': 1, 'stroke-dashoffset': 1 } }, { attr: { 'stroke-dashoffset': 0 }, duration: 1.2, stagger: { amount: .6 }, ease: 'sine.inOut', ...IMM }, tp + .9)
+        .fromTo(islab, { opacity: 0 }, { opacity: 1, duration: .8, ...IMM }, tp + 1.6);
+      izs.forEach((g, i) => tl.fromTo($('.izb', g), { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: .7, ease: 'power3.out', ...IMM }, tp + 1.9 + i * .1)
+        .fromTo($('.izt', g), { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: .7, ease: 'power3.out', ...IMM }, tp + 1.9 + i * .1)
+        .fromTo($('.izl', g), { attr: { 'stroke-dasharray': 1, 'stroke-dashoffset': 1 } }, { attr: { 'stroke-dashoffset': 0 }, duration: .8, ease: 'sine.inOut', ...IMM }, tp + 2.1 + i * .1));
+      tl.fromTo(iexs, { opacity: 0 }, { opacity: 1, duration: .4, stagger: .04, ...IMM }, tp + 2.4)
+        .fromTo(ileg, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: .6, ...IMM }, tp + 2.6);
+      ipins.forEach((pn, i) => { const at = tp + 2.5 + i * .12;
+        tl.fromTo($('.ipd', pn), { opacity: 0 }, { opacity: 1, duration: .2, ...IMM }, at - .05)
+          .fromTo($('.ips', pn), { scaleY: 0, transformOrigin: '50% 100%' }, { scaleY: 1, duration: .4, ease: 'power2.out', ...IMM }, at)
+          .fromTo($('.ipc', pn), { scale: 0, transformOrigin: '50% 50%' }, { scale: 1, duration: .5, ease: 'back.out(2)', ...IMM }, at + .25)
+          .fromTo($('.ilb', pn), { opacity: 0, x: -12 }, { opacity: 1, x: 0, duration: .5, ease: 'power3.out', ...IMM }, at + .4); });
+      t = tp + 3.8; marks.push(t); chap('s04a', 5);
+      // a walk through the spaces: the camera closes in on the zone, the zone lifts, the render opens from it as a
+      // window and its markers come out of the pin; to move on, the window closes into the pin and the camera travels
+      for (let i = 0; i < 4; i++) {
+        const nx = IP(i + 1);
+        if (i === 0) tl.fromTo(ibox, { height: IH[1], clipPath: 'inset(0% 0% 100% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: .75, ease: 'power3.out', ...IMM }, t + .8)
+          .to(Array.from(ipans[0].children), { opacity: 0, y: -10, duration: .45, stagger: .04, ease: 'power2.in' }, t)
+          .to([ileg, ...ilbs].filter(Boolean), { opacity: 0, duration: .4 }, t)
+          .to(iscr, { opacity: 1, duration: .8 }, t + .2);
+        else { const pv = IP(i);
+          tl.to(Array.from(pv.itx.children), { opacity: 0, y: -10, duration: .35, stagger: .03, ease: 'power2.in' }, t)
+            .to(ibox, { height: IH[i + 1], duration: .7, ease: 'power3.inOut' }, t + .35)
+            .to(pv.ivt, { opacity: 0, x: -16, duration: .35 }, t)
+            .to(pv.ivm, { ...SHUT, duration: .55, ease: 'power3.in' }, t + .05)
+            .to(pv.ild, { opacity: 0, duration: .35 }, t + .3)
+            .set(ipans[i], { opacity: 0 }, t + .62)
+            .to(zg(ZK[i - 1]), { y: 0, duration: .6 }, t + .4)
+            .to(ztop(ZK[i - 1]), { attr: { fill: '#cfe0f7' }, duration: .5 }, t + .4); }
+        tl.to(imap, { ...CAM[i], duration: 1.05, ease: 'power3.inOut' }, t + .3)
+          .fromTo(zg(ZK[i]), { y: 0 }, { y: -10, duration: .6, ease: 'power2.out', ...IMM }, t + 1.0)
+          .fromTo(ztop(ZK[i]), { attr: { fill: '#cfe0f7' } }, { attr: { fill: '#7fb0ee' }, duration: .6, ...IMM }, t + 1.0)
+          .fromTo(ipans[i + 1], { opacity: 0 }, { opacity: 1, duration: .01, ...IMM }, t + 1.0)
+          .fromTo(nx.ild, { opacity: 1 }, { opacity: 1, duration: .01, ...IMM }, t + 1.0)
+          .fromTo(nx.ldc, { scale: 0, transformOrigin: '50% 50%', opacity: 0 }, { scale: 1, opacity: 1, duration: .5, ease: 'back.out(1.8)', ...IMM }, t + 1.05)
+          .fromTo(nx.lds, { attr: { 'stroke-dashoffset': 1 } }, { attr: { 'stroke-dashoffset': 0 }, duration: .5, ease: 'power2.out', ...IMM }, t + 1.15)
+          .fromTo(nx.ivm, { ...SHUT, transformOrigin: '50% 50%' }, { scale: 1, x: 0, y: 0, opacity: 1, duration: .9, ease: 'expo.out', ...IMM }, t + 1.3)
+          .fromTo(nx.ivt, { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: .6, ease: 'power3.out', ...IMM }, t + 1.45)
+          .fromTo($$('button, .tbc', nx.ivt), { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: .45, stagger: .06, ...IMM }, t + 1.55)
+          .fromTo(Array.from(nx.itx.children), { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .7, stagger: .07, ease: 'power2.out', ...IMM }, t + 1.25);
+        t += 2.4; marks.push(t);
+      }
+
+      /* ---- implementation → contents: the spaces clear; night; the LED screen switches on and plays the key visual ---- */
+      const ctS = Sg('s04c'), cbox = $('.cbox', ctS), cnvs = $$('.cnv', ctS), csd = [$('.clab', ctS), ...Array.from($('.csd', ctS).children)].filter(Boolean);
+      const avtx = $('.ctx[data-g=av]', ctS), aptx = $('.ctx[data-g=app]', ctS), capp = $('.capp', ctS), cside = $('.cappside', ctS);
+      const cl3 = $('.cl3', ctS), cses = $('.csess', ctS), csesK = Array.from(cses.children), cwipe = $('.cwipe', ctS), cviz = $('.cviz', ctS), cvizI = $$('.cviz i', ctS), cnow = $('.cnow', ctS);
+      const ckvb = $('[data-a=kv]', ctS), ckl = (q) => $$(`.kl[data-l=${q}]`, ckvb), ckw = (q) => $$(`.kl[data-l=${q}] .ki`, ckvb);
+      { const q4 = IP(4); tl.to(Array.from(q4.itx.children), { opacity: 0, y: -10, duration: .35, stagger: .03 }, t).to(ibox, { clipPath: 'inset(0% 0% 100% 0%)', duration: .5, ease: 'power3.in' }, t + .2)
+          .to(q4.ivm, { ...SHUT, duration: .5, ease: 'power3.in' }, t).to([q4.ivt, q4.ild], { opacity: 0, duration: .3 }, t); }
+      tl.to(ipans[4], { opacity: 0, duration: .3 }, t + .5)
+        .to(imap, { opacity: 0, duration: .6 }, t + .05)
+        .to(iscr, { opacity: 0, duration: .5 }, t)
+        .fromTo(root, { '--c-bg': SKY }, { '--c-bg': NIGHT, duration: 1.3, ease: 'power2.inOut', ...IMM }, t + .4);
+      layer('s04c', 1, t + .8); layer('s04a', 0, t + 1.0);
+      tl.fromTo(csd, { opacity: 0, x: -16 }, { opacity: 1, x: 0, duration: .8, stagger: .07, ...IMM }, t + 1.0)
+        .fromTo(Array.from(avtx.children), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: .9, stagger: .1, ...IMM }, t + 1.05)
+        .fromTo(cbox, { opacity: 0, scale: .96, transformOrigin: '50% 60%' }, { opacity: 1, scale: 1, duration: 1.0, ease: 'power3.out', ...IMM }, t + 1.1)
+        .fromTo(ckw('win'), { clipPath: 'inset(48% 48% 48% 48% round 14px)', opacity: 0 }, { clipPath: 'inset(0% 0% 0% 0% round 0px)', opacity: 1, duration: 1.0, ease: 'expo.out', stagger: { each: .1, from: 'center' }, ...IMM }, t + 1.4)
+        .fromTo([...ckl('rearL'), ...ckl('rearR')], { opacity: 0 }, { opacity: 1, duration: .8, ...IMM }, t + 1.4)
+        .fromTo(ckl('c295'), { xPercent: -30, opacity: 0 }, { xPercent: 0, opacity: 1, duration: 1.2, ease: 'power3.out', ...IMM }, t + 1.7)
+        .fromTo(ckl('cn235'), { xPercent: 40, opacity: 0 }, { xPercent: 0, opacity: 1, duration: 1.1, ease: 'power3.out', ...IMM }, t + 1.9);
+      t += 3.4; marks.push(t); chap('s04c', 5);
+      { const bob = gsap.fromTo(ckl('c295'), { y: 0 }, { y: -8, duration: 1.8, ease: 'sine.inOut', yoyo: true, repeat: -1, paused: true }); A2X.loops.push([bob, 's04c', 0]); }
+      // 02 speaker titles: the key visual steps back, the lower third slides in
+      tl.to(ckvb, { opacity: .4, duration: .6 }, t)
+        .fromTo(cl3, { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: .7, ease: 'power3.out', ...IMM }, t + .3);
+      t += 1.3; marks.push(t);
+      // 03 session graphics & transitions: the wipe crosses the screen and leaves the session card
+      tl.to(cl3, { opacity: 0, x: -20, duration: .4, ease: 'power2.in' }, t)
+        .fromTo(cwipe, { xPercent: 0 }, { xPercent: 380, duration: 1.0, ease: 'power2.inOut', ...IMM }, t + .2)
+        .fromTo(cses, { opacity: 0 }, { opacity: 1, duration: .01, ...IMM }, t + .7)
+        .fromTo(csesK, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: .6, stagger: .1, ...IMM }, t + .8);
+      t += 1.6; marks.push(t);
+      // 04 music: the card clears, the visualiser rises over the key visual
+      tl.to(cses, { opacity: 0, duration: .5 }, t)
+        .fromTo([cviz, cnow], { opacity: 0 }, { opacity: 1, duration: .6, ...IMM }, t + .4)
+        .fromTo(cvizI, { scaleY: .04 }, { scaleY: (i) => .25 + .6 * Math.abs(Math.sin(i * .55)), duration: .8, stagger: .015, ease: 'power3.out', ...IMM }, t + .45);
+      t += 1.4; marks.push(t);
+      { const eq = gsap.to(cvizI, { scaleY: () => .15 + Math.random() * .85, duration: .24, ease: 'none', repeat: -1, repeatRefresh: true, yoyo: true, stagger: { each: .03 }, paused: true }); A2X.loops.push([eq, 's04c', 3]); }
+      // 05 event app: the screen switches off; the app rises in its place, its features beside it
+      tl.to([cviz, cnow], { opacity: 0, duration: .4 }, t)
+        .to(cbox, { opacity: 0, scaleY: .02, duration: .6, ease: 'power3.in' }, t + .1)
+        .to(avtx, { opacity: 0, y: -12, duration: .5 }, t)
+        .fromTo(aptx, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .8, ...IMM }, t + .55)
+        .fromTo(capp, { opacity: 0, y: 50, scale: .97, transformOrigin: '50% 100%' }, { opacity: 1, y: 0, scale: 1, duration: 1.1, ease: 'power3.out', ...IMM }, t + .7)
+        .fromTo(cside, { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: .8, ...IMM }, t + 1.1);
+      t += 2.4; marks.push(t);
+
+      /* ---- event app → social event: the app steps down; the cards are dealt ---- */
+      const soS = Sg('s05'), posts = $$('[data-a=post]', soS), fA = A2X.soc.fA, fB = A2X.soc.fB;
+      const spn = $$('.spn', soS).sort((a, b) => a.dataset.k - b.dataset.k), stabs = $$('.stab', soS), sback = $('.shead .sback:not(.scont)', soS);
+      const grp = (g) => posts.filter(p2 => +p2.dataset.g === g);
+      tl.to([capp, cside], { opacity: 0, y: 30, duration: .7, ease: 'power1.inOut' }, t)
+        .to([aptx, ...csd], { opacity: 0, y: -12, duration: .5, stagger: .03 }, t);
+      layer('s05', 1, t + .9); layer('s04c', 0, t + 1.0);
       const PEEL = { tl: [0, 0, 1, 1], tr: [100, 0, -1, 1], bl: [0, 100, 1, -1], br: [100, 100, -1, -1] };
-      const poly = (cn, v) => { const [x, y, sx, sy] = PEEL[cn]; return `polygon(${x}% ${y}%, ${x + sx * v}% ${y}%, ${x}% ${y + sy * v}%)`; };
+      // the sticker's anchor corner sits 12% outside the box, so a lifted (hovered) card is never clipped
+      const poly = (cn, v) => { const [x, y, sx, sy] = PEEL[cn], m = 12; return `polygon(${x - sx * m}% ${y - sy * m}%, ${x + sx * (v - m)}% ${y - sy * m}%, ${x - sx * m}% ${y + sy * (v - m)}%)`; };
       const corner = (el) => { const r = el.getBoundingClientRect(), s = soS.getBoundingClientRect(); return ((r.top + r.height / 2 < s.top + s.height / 2) ? 't' : 'b') + ((r.left + r.width / 2 < s.left + s.width / 2) ? 'l' : 'r'); };
-      const cards5 = [[nap, 'tl'], ...posts.map(p => [p, corner(p)])];
       const r0 = (el) => +gsap.getProperty(el, 'rotation') || 0;
-      tl.fromTo(fA, { clipPath: 'inset(0% 100% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.6, ...IMM }, t + 1.75)
-        .fromTo(fB, { clipPath: 'inset(0% 0% 0% 100%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.6, ...IMM }, t + 1.9);
-      cards5.forEach(([el, cn], i) => {
-        const [, , sx, sy] = PEEL[cn], rr = r0(el);
-        tl.fromTo(el, { clipPath: poly(cn, 0), rotation: rr + sx * sy * 3, scale: 1.04 }, { clipPath: poly(cn, 320), rotation: rr, scale: 1, duration: i ? 1.0 : 1.2, ...IMM }, t + (i ? 2.25 + i * .14 : 1.95));
-      });
-      t += 4.4; marks.push(t); chap('s05', 1);
+      const CN = new Map(posts.map(p2 => [p2, corner(p2)])), R0 = new Map(posts.map(p2 => [p2, r0(p2)]));
+      // postcards are laid like stickers, corner to corner, and lifted the same way
+      const dealIn = (g, at, T = tl, im = IMM) => grp(g).forEach((el, i) => { const cn = CN.get(el), [, , sx, sy] = PEEL[cn], rr = R0.get(el);
+        T.fromTo(el, { clipPath: poly(cn, 0), rotation: rr + sx * sy * 3, scale: 1.04 }, { clipPath: poly(cn, 320), rotation: rr, scale: 1, duration: i ? .9 : 1.1, ...im }, at + i * .13); });
+      const dealOut = (g, at, T = tl) => grp(g).slice().reverse().forEach((el, i) => { const cn = CN.get(el), [, , sx, sy] = PEEL[cn], rr = R0.get(el);
+        T.to(el, { clipPath: poly(cn, 0), rotation: rr + sx * sy * 3, scale: 1.03, duration: .7 }, at + i * .06); });
+      /* v2.11: overview of three napkins over the crossed friezes (they stay crossed behind everything). A napkin opens
+         by growing into the central white card (one frame resizes, the napkin's content fades out, the proposal's
+         fades in); between proposals the frame resizes and the content changes on white; the postcards always leave
+         first and the new ones are stuck on after, corner to corner */
+      const snaps = $$('.snap', soS).sort((a, b) => a.dataset.k - b.dataset.k), sov = [...Array.from($('.sov', soS).children), $('.sovc', soS)].filter(Boolean), shd = $('.shead', soS), shlab = $('.shlab', soS);
+      const sfr = $('.sfr', soS), NR = snaps.map(r0), SCN = ['bl', 'tr', 'br'];
+      const nIn = (el) => Array.from($('.snb > span', el).children), kids = (k2) => Array.from(spn[k2].firstElementChild.children);
+      snaps.forEach((el, i) => CN.set(el, SCN[i])); CN.set(sfr, 'tl');
+      const N0 = snaps.map(el => ({ left: parseFloat(el.style.left), top: parseFloat(el.style.top), width: 320, height: 430 }));
+      const FH = spn.map(el => el.offsetHeight || 480);
+      // v2.13: the card and its bar are one group, centred on the same line whatever the proposal's length
+      const GC = 452, TOP = FH.map(h => Math.round(GC - (h + 26 + 104) / 2)), FR = (k2) => ({ left: 438, top: TOP[k2], width: 564, height: FH[k2] });
+      spn.forEach((el, k2) => gsap.set(el, { top: TOP[k2] }));
+      gsap.set(spn, { opacity: 1 }); spn.forEach((el, k2) => gsap.set(kids(k2), { opacity: 0, y: 12 }));
+      posts.forEach(el => gsap.set(el, { clipPath: poly(CN.get(el), 0) }));
+      const tS = t + .9;
+      tl.fromTo(fA, { clipPath: 'inset(0% 100% 0% 0%)', y: -436, rotation: -3 }, { clipPath: 'inset(0% 0% 0% 0%)', y: -436, rotation: -3, duration: 1.6, ...IMM }, tS + .1)
+        .fromTo(fB, { clipPath: 'inset(0% 0% 0% 100%)', opacity: 1, x: 0, rotation: 2.5 }, { clipPath: 'inset(0% 0% 0% 0%)', opacity: 1, x: 0, rotation: 2.5, duration: 1.6, ...IMM }, tS + .2)
+        .fromTo(sov, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .8, stagger: .08, ...IMM }, tS + .1);
+      snaps.forEach((el, i) => { const [, , sx, sy] = PEEL[CN.get(el)];
+        tl.fromTo(el, { clipPath: poly(CN.get(el), 0), rotation: NR[i] + sx * sy * 4, opacity: 1 }, { clipPath: poly(CN.get(el), 320), rotation: NR[i], duration: 1.0, ease: 'power2.out', ...IMM }, tS + .5 + i * .16); });
+      t = tS + 2.2; marks.push(t); chap('s05', 4);
+      const peelOff = (el, i, at, T) => { const [, , sx, sy] = PEEL[CN.get(el)]; T.to(el, { clipPath: poly(CN.get(el), 0), rotation: NR[i] + sx * sy * 4, duration: .55, ease: 'power2.in' }, at); };
+      const stickOn = (el, i, at, T) => { const [, , sx, sy] = PEEL[CN.get(el)]; T.fromTo(el, { clipPath: poly(CN.get(el), 0), rotation: NR[i] + sx * sy * 4, opacity: 1, ...N0[i] }, { clipPath: poly(CN.get(el), 320), rotation: NR[i], duration: .8, ease: 'power2.out' }, at); };
+      const open1 = (k2, at, T = tl, im = IMM) => {
+        const el = snaps[k2];
+        snaps.forEach((o2, i) => { if (i !== k2) peelOff(o2, i, at + Math.abs(i - k2) * .06, T); });
+        T.to(sov, { opacity: 0, y: -10, duration: .4 }, at)
+          .to(nIn(el), { opacity: 0, duration: .3, stagger: .03 }, at)
+          .fromTo(el, { ...N0[k2], rotation: NR[k2] }, { ...FR(k2), rotation: 0, duration: .9, ease: 'power3.inOut', ...im }, at + .15)
+          .fromTo(sfr, { opacity: 0, top: TOP[k2], height: FH[k2], clipPath: poly('tl', 320) }, { opacity: 1, duration: .01, ...im }, at + 1.05)
+          .to(el, { opacity: 0, duration: .01 }, at + 1.06)
+          .fromTo(kids(k2), { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: .5, stagger: .05, ...im }, at + 1.1)
+          .fromTo(shd, { top: TOP[k2] + FH[k2] + 26 }, { top: TOP[k2] + FH[k2] + 26, duration: .01, ...im }, at + 1.0)
+          .fromTo([shd, shlab], { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: .6, ...im }, at + 1.3);
+        dealIn(k2, at + 1.25, T, im);
+      };
+      const close1 = (k2, at, T) => {
+        const el = snaps[k2];
+        dealOut(k2, at, T);
+        T.to([shd, shlab], { opacity: 0, y: 10, duration: .35 }, at)
+          .to(kids(k2), { opacity: 0, y: -8, duration: .3, stagger: .03 }, at)
+          .fromTo(el, { ...FR(k2), rotation: 0, opacity: 1, clipPath: poly(CN.get(el), 320) }, { ...N0[k2], rotation: NR[k2], duration: .9, ease: 'power3.inOut' }, at + .5)
+          .to(sfr, { opacity: 0, duration: .01 }, at + .5)
+          .fromTo(nIn(el), { opacity: 0 }, { opacity: 1, duration: .4, stagger: .04 }, at + 1.2)
+          .to(sov, { opacity: 1, y: 0, duration: .6, stagger: .06 }, at + 1.1);
+        snaps.forEach((o2, i) => { if (i !== k2) stickOn(o2, i, at + 1.0 + Math.abs(i - k2) * .08, T); });
+      };
+      A2X.soc.open1 = open1; A2X.soc.close1 = close1;
+      open1(0, t);
+      t += 2.6; marks.push(t);
+      // proposal → proposal: the postcards peel off and the copy fades; the white card resizes; then the new copy and postcards
+      for (let k2 = 0; k2 < 2; k2++) {
+        dealOut(k2, t);
+        tl.to(kids(k2), { opacity: 0, y: -8, duration: .3, stagger: .03 }, t)
+          .to(sfr, { top: TOP[k2 + 1], height: FH[k2 + 1], duration: .6, ease: 'power3.inOut' }, t + .55)
+          .to(shd, { top: TOP[k2 + 1] + FH[k2 + 1] + 26, duration: .6, ease: 'power3.inOut' }, t + .55)
+          .fromTo(kids(k2 + 1), { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: .5, stagger: .05, ...IMM }, t + 1.05);
+        dealIn(k2 + 1, t + 1.2);
+        t += 2.4; marks.push(t);
+      }
+      const cards5 = grp(2).map(el => [el, CN.get(el)]);
 
       /* ---- 17 → 18 · the cards and friezes fold away; the C295 flies in from the right as it is drawn ---- */
       const crS = Sg('s06'), plane = $('svg.dr', crS), out = $$('[data-a=trace] polygon', crS), inn = $$('.tin polyline', crS);
-      const cpins = $$('.pin[data-a=hs]', crS), crest = $$('.crewbg, .tlist, .cslot, h2, p.cap', crS);
+      const cpinsL = $$('.pin[data-a=hs]', crS), cteams = $$('.cteam', crS).sort((a, b) => a.dataset.k - b.dataset.k), cslotl = $('.cslotl', crS), chd = $$(':scope > h2, :scope > p.cap', crS);
+      const cpins = cpinsL, crest = [...chd, cslotl, ...cteams].filter(Boolean);
       const scl = (el) => { const m = el.getScreenCTM && el.getScreenCTM(); return m ? Math.max(1, Math.hypot(m.a, m.b)) * 1.04 : 1.5; };
       cards5.slice().reverse().forEach(([el, cn], i) => {
         const [, , sx, sy] = PEEL[cn], rr = r0(el);
         tl.to(el, { clipPath: poly(cn, 0), rotation: rr + sx * sy * 3, scale: 1.03, duration: 1.0 }, t + i * .1);
       });
       tl.to(fA, { clipPath: 'inset(0% 100% 0% 0%)', duration: 1.1 }, t + .2)
-        .to(fB, { clipPath: 'inset(0% 0% 0% 100%)', duration: 1.1 }, t + .3);
+        .to(fB, { clipPath: 'inset(0% 0% 0% 100%)', duration: 1.1 }, t + .25)
+        .to(kids(2), { opacity: 0, duration: .3 }, t)
+        .to(sfr, { clipPath: poly('tl', 0), duration: .8, ease: 'power2.in' }, t + .2)
+        .to([shd, shlab], { opacity: 0, y: 10, duration: .5 }, t);
       layer('s06', 1, t + .7); layer('s05', 0, t + 1.6);
-      // it comes from beyond the right edge of the screen (even on wide screens, where the canvas does not reach the edge)
+      // the C295 in profile flies in from the right as it is drawn; its points appear; the counter prints the first crew
       tl.fromTo(plane, { x: () => 1500 + Math.max(0, (innerWidth / k() - 1440) / 2), opacity: 1 }, { x: 0, duration: 2.9, ease: 'power3.out', ...IMM }, t + .5);
       [...out, ...inn].forEach((el, j) => tl.fromTo(el, { attr: { 'stroke-dasharray': () => scl(el) + ' ' + scl(el), 'stroke-dashoffset': () => scl(el) } },
         { attr: { 'stroke-dashoffset': 0 }, duration: j < out.length ? 2.2 : 1.2, ease: 'sine.inOut', ...IMM }, t + (j < out.length ? .7 : 1.4 + .6 * (j - out.length) / Math.max(1, inn.length - 1))));
-      // the body of the plane is only filled once its outline is drawn (no silhouette ahead of the line)
       const trace = $('[data-a=trace]', crS);
       if (trace) tl.fromTo(trace, { attr: { 'fill-opacity': 0 } }, { attr: { 'fill-opacity': .3 }, duration: .9, ...IMM }, t + 2.4);
-      tl.fromTo(crest, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: .9, stagger: .08, ...IMM }, t + 2.3)
-        .fromTo(cpins, { scale: .8, opacity: 0 }, { scale: 1, opacity: 1, duration: .7, stagger: .1, ...IMM }, t + 2.6);
+      const c0 = $$('.cpass', cteams[0]);
+      const SH0 = '0 20px 40px rgba(0,8,24,0)', SH1 = '0 20px 40px rgba(0,8,24,.45)';  // the passes' shadow grows as they come out of the slot and fades as they go back
+      gsap.set($$('.cpass', crS), { yPercent: -145, boxShadow: SH0 });
+      tl.fromTo(chd, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: .9, stagger: .08, ...IMM }, t + 2.3)
+        .fromTo(cpinsL, { scale: .8, opacity: 0 }, { scale: 1, opacity: 1, duration: .7, stagger: .1, ...IMM }, t + 2.6)
+        .fromTo(cslotl, { scaleX: 0, opacity: 0 }, { scaleX: 1, opacity: .35, duration: .7, ease: 'power3.out', ...IMM }, t + 2.7)
+        .fromTo(c0, { yPercent: -145, boxShadow: SH0 }, { yPercent: 0, boxShadow: SH1, duration: .8, stagger: .14, ease: 'power2.out', ...IMM }, t + 3.0);
+      t += .4;
       t += 3.6; marks.push(t); chap('s06', 1);
 
-      /* ---- 18 → 19 · the plane leaves to the left; only then are the gauges drawn ---- */
+      /* ---- crew → work plan (v2, 10 nov): the plane leaves to the left, drawing the timeline behind it; the phases rise in order ---- */
+      const wS = Sg('s06b'), whead = Array.from($('.whead', wS).children), wbd = $('.wbd', wS), wrows = $$('.wrow', wS), wgate = $('.wgate', wS), wgks = $$('.wgk', wS);
+      const wbh = $$('.wbd .bh, .wbd .wcols, .whint', wS), wcells = (r) => $$('[data-a=cell]', r), wtx = (r) => $('.c3', r);
+      // v2.12: the crew leaves first and completely (passes back into the slot, the plane off to the left), then the board
+      tl.to($$('.cpass', cteams[0]), { yPercent: -145, boxShadow: SH0, duration: .45, stagger: .04, ease: 'power2.in' }, t)
+        .to([...cpins, ...chd, cslotl], { opacity: 0, duration: .45 }, t + .1)
+        .to(plane, { x: -1800, duration: 1.0, ease: 'power3.in' }, t + .2);
+      layer('s06b', 1, t + 1.15); layer('s06', 0, t + 1.25);
+      t += .35;
+      // v2.13: the departures board drops in, the rows are filled flap by flap; the gate card opens on the event
+      tl.fromTo(whead, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: .8, stagger: .08, ...IMM }, t + 1.0)
+        .fromTo(wbd, { clipPath: 'inset(0% 0% 100% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.0, ease: 'power3.inOut', ...IMM }, t + 1.1)
+        .fromTo(wbh, { opacity: 0 }, { opacity: 1, duration: .5, ...IMM }, t + 1.4);
+      wrows.forEach((r, i) => tl.fromTo(r, { opacity: 0, x: -14 }, { opacity: 1, x: 0, duration: .5, ...IMM }, t + 1.5 + i * .07)
+        .fromTo(wcells(r), { rotationX: -90, opacity: .2 }, { rotationX: 0, opacity: 1, duration: .4, stagger: { amount: .35 }, ...IMM }, t + 1.6 + i * .08)
+        .fromTo(wtx(r), { opacity: 0 }, { opacity: 1, duration: .4, ...IMM }, t + 1.8 + i * .08));
+      tl.fromTo(wgate, { opacity: 0, clipPath: 'inset(0% 0% 100% 0%)' }, { opacity: 1, clipPath: 'inset(0% 0% 0% 0%)', duration: .8, ease: 'power3.out', ...IMM }, t + 2.3);
+      const WON = { backgroundColor: '#243a5e', boxShadow: 'inset 4px 0 0 #9fd0ff' }, WOFF = { backgroundColor: 'rgba(36,58,94,0)', boxShadow: 'inset 0 0 0 #9fd0ff' };
+      wrows.forEach((r, j) => gsap.set(r, j ? WOFF : WON));
+      t += 3.2; marks.push(t); chap('s06b', 7);
+      // v2.14: one flight per step (from the kick-off to the closure); the row lights up, its flaps turn, the gate card
+      // changes; a click on a row jumps to its step
+      for (let k2 = 0; k2 < 6; k2++) {
+        tl.to(wrows[k2], { ...WOFF, duration: .35 }, t)
+          .to(wrows[k2 + 1], { ...WON, duration: .35 }, t + .05)
+          .to(wcells(wrows[k2 + 1]), { keyframes: [{ rotationX: -90, duration: .18 }, { rotationX: 0, duration: .22 }], stagger: { amount: .25 } }, t + .05)
+          .to(wgks[k2], { opacity: 0, y: -8, duration: .35, ease: 'power2.in' }, t)
+          .fromTo(wgks[k2 + 1], { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: .5, ease: 'power2.out', ...IMM }, t + .3);
+        t += 1.1; marks.push(t);
+      }
+      // the event's status blinks like a real board while the chapter is on screen
+      { const evs = $$('.wrow.ev .st [data-a=cell]', wS); if (evs.length) { const bl = gsap.to(evs, { opacity: .35, duration: .5, ease: 'steps(1)', repeat: -1, yoyo: true, repeatDelay: .5, paused: true }); A2X.loops.push([bl, 's06b']); } }
+
+      /* ---- work plan → sustainability: the phases clear; the gauges are drawn ---- */
       const gS = Sg('s07'), gauges = $$('[data-a=gauge]', gS), rims = $$('[data-a=grim]', gS), ticks = $$('[data-a=gtick]', gS);
       const garcs = gauges.map(g => $('path', g)), needles = $$('[data-a=needle]', gS), glabels = $$(':scope > div > div, h2, h2 ~ p', gS).filter(e => !e.closest('svg'));
       len1(rims);
-      tl.to([...cpins, ...crest, ...$$('path.ln', crS)], { opacity: 0, duration: .6 }, t)
-        .to(plane, { x: -1800, duration: 1.5, ease: 'power3.in' }, t + .1);
-      layer('s07', 1, t + 1.3); layer('s06', 0, t + 1.65);
-      t += 1.3;
+      tl.to(wgate, { clipPath: 'inset(0% 0% 100% 0%)', duration: .5, ease: 'power2.in' }, t)
+        .to(wbd, { clipPath: 'inset(0% 0% 100% 0%)', duration: .7, ease: 'power3.in' }, t + .1)
+        .to([...whead, $('.whint', wS)].filter(Boolean), { opacity: 0, y: -12, duration: .5 }, t + .1);
+      layer('s07', 1, t + .9); layer('s06b', 0, t + 1.0);
+      t += .9;
       tl.fromTo(rims, { attr: { 'stroke-dasharray': 1, 'stroke-dashoffset': 1 } }, { attr: { 'stroke-dashoffset': 0 }, duration: 1.2, stagger: .14, ease: 'sine.inOut', ...IMM }, t)
         .fromTo(ticks, { opacity: 0 }, { opacity: 1, duration: .7, stagger: .14, ...IMM }, t + .6)
         .fromTo(garcs, { opacity: 0 }, { opacity: 1, duration: .7, stagger: .14, ...IMM }, t + .8)
@@ -1342,41 +1562,46 @@
 
       /* ---- the stepper: one gesture, one step; up cuts to the chapter before, as it ended ---- */
       // after any jump of the playhead (a cut, a re-arm) the drum and the claim's inner copy are placed again
-      tl.eventCallback('onUpdate', () => { P.place(); sync(); });
+      tl.eventCallback('onUpdate', () => { P.place(); if (A2X.wplace) A2X.wplace(); });
       const n = marks.length;
       const chOf = (i) => CHS.findIndex(c2 => i >= c2.from && i < c2.from + c2.steps);
       let cur = -1, chOn = -1;
-      const loops = () => {
-        const id = CHS[chOn] ? CHS[chOn].id : '';
-        A2X.loops.forEach(([tw, lid]) => (lid === id ? tw.play() : tw.pause()));
+      const loops = (i) => {
+        const id = CHS[chOn] ? CHS[chOn].id : '', st = CHS[chOn] ? i - CHS[chOn].from : -1;
+        A2X.loops.forEach(([tw, lid, s0]) => (lid === id && (s0 == null || s0 === st) ? tw.play() : tw.pause()));
       };
-      // the concept keeps its depth while it is on screen: the landscape drifts behind the glass, the C295 floats,
-      // and both follow the pointer a little (the window and the plane are fixed by the act; only their inner offsets move)
-      const stripImg = strip && $('img', strip);
-      if (stripImg && cpl) {
-        A2X.loops.push([gsap.fromTo(stripImg, { xPercent: -2, yPercent: 1.5 }, { xPercent: 2, yPercent: -1.5, duration: 9, ease: 'sine.inOut', yoyo: true, repeat: -1, paused: true }), 's03b'],
-          [gsap.fromTo(cpl, { yPercent: 0 }, { yPercent: -5, duration: 3.4, ease: 'sine.inOut', yoyo: true, repeat: -1, paused: true }), 's03b']);
-        const qx = gsap.quickTo(stripImg, 'x', { duration: 1.4, ease: 'power3.out' }), qy = gsap.quickTo(stripImg, 'y', { duration: 1.4, ease: 'power3.out' });
-        const px = gsap.quickTo(cpl, 'xPercent', { duration: 1.2, ease: 'power3.out' });
+      // the key visual keeps its depth while it is on screen: its layers follow the pointer, each by its depth
+      if (!CAP && matchMedia('(hover: hover) and (pointer: fine)').matches) {
+        const qs = $$('.kp', kvb).map(p => { const d = +p.parentElement.dataset.depth || .5; return [d, gsap.quickTo(p, 'x', { duration: .9, ease: 'power3.out' }), gsap.quickTo(p, 'y', { duration: .9, ease: 'power3.out' })]; });
+        // and, as on the v1 cover, the photos travel inside their windows the other way
+        const qp = $$('.ph', kvb).map(g => [gsap.quickTo(g, 'x', { duration: 1.1, ease: 'power3.out' }), gsap.quickTo(g, 'y', { duration: 1.1, ease: 'power3.out' })]);
+        const rest = () => { qs.forEach(([, qx, qy]) => { qx(0); qy(0); }); qp.forEach(([qx, qy]) => { qx(0); qy(0); }); };
         sec.addEventListener('pointermove', e => {
-          if (!CHS[chOn] || CHS[chOn].id !== 's03b' || o.busy) return;
+          if (!CHS[chOn] || CHS[chOn].id !== 's03b' || o.busy) return rest();
           const nx = e.clientX / innerWidth - .5, ny = e.clientY / innerHeight - .5;
-          qx(-nx * 28); qy(-ny * 18); px(nx * 4);
+          qs.forEach(([d, qx, qy]) => { qx(-nx * 46 * d); qy(-ny * 26 * d); });
+          qp.forEach(([qx, qy]) => { qx(nx * 34); qy(ny * 18); });
         });
+        sec.addEventListener('pointerleave', rest);
       }
+      // v2.14: the photos sit a little larger than their windows, so the pointer can move them without ever showing an edge
+      gsap.set($$('.pi', kvb), { scale: 1.1, transformOrigin: '50% 50%' });
       let crewCall = null;
       const mark = (i, instant) => {
         if (i === cur) return; cur = i;
-        const ch = chOf(i); if (ch !== chOn) { chOn = ch; loops(); }
+        const ch = chOf(i); if (ch !== chOn) chOn = ch; loops(i);
         // the chosen team's line is drawn once the plane is in place (it is not part of the scrubbable timeline)
         if (crewCall) crewCall.kill();
         if (CHS[ch].id === 's06') crewCall = gsap.delayedCall(instant ? 0 : 3.1, () => A2X.crew.show(true));
-        else A2X.crew.show(false);
+        else { A2X.crew.show(false); if (A2X.crewReset) A2X.crewReset(); }
         const lay = Ly(CHS[ch].id);
         sec.dataset.ch = lay.dataset.ch;
         if (o.st && curY() >= o.st.start - 2 && curY() <= o.st.end + 2) $('#chap').textContent = lay.dataset.ch;
         gsap.to(fieldState, { amt: FIELD[CHS[ch].id] ?? .7, duration: .8, overwrite: true });
-        if (CHS[ch].id === 's04a') [...ipins, ...ilegs].forEach((p) => p.classList.toggle('on', +p.dataset.k === i - CHS[ch].from));
+        if (CHS[ch].id === 's05') { const st = i - CHS[ch].from; stabs.forEach((b) => b.classList.toggle('on', +b.dataset.k === st - 1)); snaps.forEach((b) => (b.style.pointerEvents = st === 0 ? 'auto' : 'none')); shd.style.pointerEvents = st === 0 ? 'none' : 'auto'; const sc = $('.sovc', soS); if (sc) sc.style.pointerEvents = st === 0 ? 'auto' : 'none'; }
+        if (CHS[ch].id === 's06b') wrows.forEach((r, j) => r.setAttribute('aria-current', j === i - CHS[ch].from ? 'step' : 'false'));
+        if (CHS[ch].id === 's04c') cnvs.forEach((b) => { const on = +b.dataset.k === i - CHS[ch].from; b.classList.toggle('on', on); b.setAttribute('aria-current', on ? 'step' : 'false'); });
+        if (CHS[ch].id === 's04a') ipans.forEach((p) => (p.style.pointerEvents = +p.dataset.k === i - CHS[ch].from ? 'auto' : 'none'));
         if (CHS[ch].id === 's03c') rows.forEach((r, j) => r.setAttribute('aria-current', j === i - CHS[ch].from ? 'step' : 'false'));
       };
       const o = { sec, n, at: 0, busy: false, q: 0, drive: false, tw: null, frozen: false };
@@ -1396,7 +1621,7 @@
       // re-armed (before the map is drawn) only once the whole act is below the screen
       ScrollTrigger.create({ trigger: sec.parentElement.classList.contains('pin-spacer') ? sec.parentElement : sec, start: 'top bottom', onLeaveBack: () => { if (o.tw) o.tw.kill(); tl.time(0); o.at = 0; mark(0); } });
       o.pos = (i) => o.st.start + (o.st.end - o.st.start) * i / (n - 1);
-      o.set = (i) => { if (o.tw) o.tw.kill(); o.q = 0; o.busy = false; o.drive = false; tl.time(i === 0 && curY() < o.st.start - 2 ? 0 : marks[i]); o.at = i; mark(i, true); };
+      o.set = (i) => { if (o.finish) o.finish(); if (o.tw) o.tw.kill(); o.q = 0; o.busy = false; o.drive = false; tl.time(i === 0 && curY() < o.st.start - 2 ? 0 : marks[i]); o.at = i; mark(i, true); };
       const after = () => { o.drive = false; o.busy = false; if (o.q) { const d = Math.sign(o.q); o.q = 0; const nx = o.at + d; if (nx >= 0 && nx < n) o.go(nx); } };
       // 7 nov · a jump inside one chapter (venue stops, board rows) never blanks the scene: only what differs between
       // the two steps moves. The target is read from the act itself (time moved there and back, unpainted), the
@@ -1404,20 +1629,24 @@
       // their old values back and the act is set on the new step, so its own record of start values stays right.
       const MV = ['opacity', 'y'], CELL = ['opacity', 'rotationX', 'color'], ROW = ['opacity', 'x', 'backgroundColor', 'boxShadow'];
       const JUMPSET = {
-        s03c: () => [...mocks.map(e => [e, MV]), [cz, MV], ...rows.map(e => [e, ROW]), ...rows.flatMap(r => $$('[data-a=cell]', r)).map(e => [e, CELL])],
-        s04a: () => [[iroute, ['attr']], ...scards.map(e => [e, ['opacity', 'x', 'y']])],
+        s03c: () => [...mocks.map(e => [e, MV]), [tha, MV], [thb, MV], [tpb, MV], ...rows.map(e => [e, ROW]), ...rows.flatMap(r => $$('[data-a=cell]', r)).map(e => [e, CELL])],
+        s05: () => [...posts.map(e => [e, ['clipPath', 'rotation', 'scale']]), ...snaps.map(e => [e, ['opacity', 'left', 'top', 'width', 'height', 'rotation', 'clipPath']]), ...snaps.flatMap(e => nIn(e).map(c2 => [c2, ['opacity']])), [sfr, ['opacity', 'top', 'height']], ...spn.flatMap((e, k2) => kids(k2).map(c2 => [c2, MV])), ...sov.map(e => [e, MV]), [shd, ['opacity', 'y', 'top']], [shlab, MV]],
+        s06b: () => [...wrows.map(e => [e, ['backgroundColor', 'boxShadow']]), ...wgks.map(e => [e, MV]), ...wrows.flatMap(r => wcells(r)).map(e => [e, ['rotationX']])],
+        s04c: () => [[ckvb, ['opacity']], [cl3, ['opacity', 'x']], [cses, ['opacity']], ...csesK.map(e => [e, MV]), [cwipe, ['xPercent']], [cviz, ['opacity']], [cnow, ['opacity']], ...cvizI.map(e => [e, ['scaleY']]),
+          [cbox, ['opacity', 'scaleY']], [avtx, MV], [aptx, MV], [capp, ['opacity', 'y', 'scale']], [cside, ['opacity', 'x']]],
+        s04a: () => [...ipans.map(e => [e, ['opacity', 'y']]), ...Array.from(ipans[0].children).map(e => [e, MV]), [imap, ['x', 'y', 'scale']], [iscr, ['opacity']], [ibox, ['clipPath', 'height']], ...[ileg, ...ilbs].filter(Boolean).map(e => [e, ['opacity']]), ...ZK.map(k => [zg(k), ['y']]),
+          ...ipans.slice(1).flatMap((p2, j) => { const q = IP(j + 1); return [[q.ivm, ['opacity', 'scale', 'x', 'y']], [q.ivt, ['opacity', 'x']], [q.ild, ['opacity']], ...Array.from(q.itx.children).map(e => [e, MV])]; })],
       };
       const readOf = ([e, props]) => { const v = {}; props.forEach(p => { if (p === 'attr') v.attr = { 'stroke-dashoffset': +e.getAttribute('stroke-dashoffset') }; else v[p] = gsap.getProperty(e, p); }); return v; };
       const jumpWithin = (i) => {
+        if (o.tw && o.tw.isActive() && o.tw.vars && o.tw.vars.onComplete) { const pt2 = o.tw; o.tw = null; pt2.progress(1); }
         const id = CHS[chOf(i)].id, set = JUMPSET[id](), els = set.map(x => x[0]);
-        const t0 = tl.time(), from = set.map(readOf), czOn = id === 's03c' && i === CHS[chOf(i)].from;
+        const t0 = tl.time(), from = set.map(readOf);
         tl.time(marks[i], true); const to = set.map(readOf); tl.time(t0, true);
         o.busy = true; o.drive = true; o.t0 = performance.now(); if (o.tw) o.tw.kill();
         const prev = o.at; o.at = i; mark(i);
-        if (czOn) gsap.set(czL, { autoAlpha: 1 });
         const jt = gsap.timeline({ onComplete() {
           els.forEach((e, j) => gsap.set(e, from[j]));
-          if (czOn) gsap.set(czL, { autoAlpha: Ly('s03b').style.visibility === 'hidden' ? 0 : 1 });
           tl.time(marks[i]);
           after();
         } });
@@ -1435,8 +1664,54 @@
         scrollToY(o.pos(i), .9);
         return prev;
       };
+      // social event: from the overview a napkin opens straight into any proposal, and «All proposals» closes any of
+      // them back into its napkin (a one-off animation; then the act is set on the new step, as in a jump)
+      // «Continue»: whatever the social event shows (the three napkins or a proposal) leaves the way the act takes its
+      // last proposal away: postcards and card peel off, napkins peel off, the friezes fold. Then the act plays the
+      // crew's own entrance (the plane flies in and is drawn, the passes are printed).
+      const toCrew = () => {
+        const c5 = CHS.find(c2 => c2.id === 's05'), c6 = CHS.find(c2 => c2.id === 's06'); if (!c5 || !c6) return;
+        if (o.busy && o.tw && o.tw.isActive()) { const pt2 = o.tw; o.tw = null; pt2.progress(1); }
+        if (chOf(o.at) !== CHS.indexOf(c5)) { o.go(c6.from); return; }
+        const st = o.at - c5.from, i = c6.from;
+        o.busy = true; o.drive = true; o.q = 0; o.t0 = performance.now(); if (o.tw) o.tw.kill();
+        o.at = i; mark(i);
+        const jt = gsap.timeline({ onComplete() {
+          const t0 = marks[i - 1] + .5;
+          tl.time(t0, true); gsap.set(Ly('s05'), { autoAlpha: 0 });
+          o.tw = tl.tweenTo(marks[i], { duration: marks[i] - t0, ease: 'none', onComplete: after });
+        } });
+        if (st === 0) { snaps.forEach((el, j) => peelOff(el, j, j * .08, jt)); jt.to(sov, { opacity: 0, y: -10, duration: .4, stagger: .04 }, 0); }
+        else { const k2 = st - 1; dealOut(k2, 0, jt);
+          jt.to(kids(k2), { opacity: 0, duration: .3 }, 0).to(sfr, { clipPath: poly('tl', 0), duration: .7, ease: 'power2.in' }, .2).to([shd, shlab], { opacity: 0, y: 10, duration: .4 }, 0); }
+        jt.to(fA, { clipPath: 'inset(0% 100% 0% 0%)', duration: .9 }, .15).to(fB, { clipPath: 'inset(0% 0% 0% 100%)', duration: .9 }, .2);
+        scrollToY(o.pos(i), 1.0 + (marks[i] - marks[i - 1] - .5));
+      };
+      const socMorph = (i) => {
+        const c5 = CHS.find(c2 => c2.id === 's05'); if (!c5 || !A2X.soc.open1) return false;
+        const f5 = c5.from, a0 = o.at; let k2, open;
+        if (a0 === f5 && i >= f5 + 2 && i <= f5 + 3) { k2 = i - f5 - 1; open = true; }
+        else if (i === f5 && a0 >= f5 + 2 && a0 <= f5 + 3) { k2 = a0 - f5 - 1; open = false; }
+        else return false;
+        // a morph still running is finished first (its end sets the act right), then the new one starts
+        if (o.tw && o.tw.isActive()) { const pt2 = o.tw; o.tw = null; pt2.progress(1); }
+        const keep = JUMPSET.s05().map(x => [x[0], readOf(x)]);
+        o.busy = true; o.drive = true; o.t0 = performance.now(); if (o.tw) o.tw.kill();
+        o.at = i; mark(i);
+        const jt = gsap.timeline({ onComplete() { keep.forEach(([e, v]) => gsap.set(e, v)); tl.time(marks[i]); after(); } });
+        if (open) A2X.soc.open1(k2, 0, jt, {}); else A2X.soc.close1(k2, 0, jt);
+        o.tw = jt;
+        scrollToY(o.pos(i), Math.min(1.2, jt.duration()));
+        return true;
+      };
+      // v2.17: a one-off transition still running (a jump inside a chapter, a napkin morph, «Continue») is always
+      // finished, never killed half-way, before anything else moves the act: killed, it left pieces in between states
+      const finishTw = () => { if (o.tw && o.tw.isActive() && o.tw.vars && o.tw.vars.onComplete) { const pt2 = o.tw; o.tw = null; o.q = 0; pt2.progress(1); } };
+      o.finish = finishTw;
       o.go = (i) => {
         i = clamp(i, 0, n - 1);
+        finishTw();
+        if (socMorph(i)) return;
         if ((i < o.at - 1 || i > o.at + 1) && chOf(i) === chOf(o.at) && JUMPSET[CHS[chOf(i)].id]) { jumpWithin(i); return; }
         if (i < o.at - 1 || i > o.at + 1) {
           // a jump (pins, rows, index) is a short cross-fade of the scene onto the new step, never a sweep
@@ -1469,9 +1744,34 @@
       ACT2O = o; o.tl = tl; o.marks = marks; o.chs = CHS;
       mark(0);
       // the content is the control: board rows and venue stops jump to their step
-      rows.forEach((r, j) => { r.setAttribute('role', 'button'); r.tabIndex = 0; r.style.cursor = 'pointer'; const go = () => o.go(CHS[3].from + j); r.addEventListener('click', go); r.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } }); });
-      ipins.forEach((p, j) => p.addEventListener('click', () => o.go(CHS[4].from + j)));
-      ilegs.forEach((p) => p.addEventListener('click', () => o.go(CHS[4].from + +p.dataset.k)));
+      rows.forEach((r, j) => { r.setAttribute('role', 'button'); r.tabIndex = 0; r.style.cursor = 'pointer'; const go = () => o.go(CHS.find(c2 => c2.id === 's03c').from + j); r.addEventListener('click', go); r.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } }); });
+      const s05from = () => CHS.find(c2 => c2.id === 's05').from;
+      stabs.forEach((b) => b.addEventListener('click', () => o.go(s05from() + 1 + +b.dataset.k)));
+      snaps.forEach((b) => b.addEventListener('click', () => o.go(s05from() + 1 + +b.dataset.k)));
+      if (sback) sback.addEventListener('click', () => o.go(s05from()));
+      // «Continue»: from the overview or any proposal straight on to the crew
+      $$('[data-s5-cont]', soS).forEach(b => b.addEventListener('click', () => toCrew()));
+      cnvs.forEach((b) => b.addEventListener('click', () => o.go(CHS.find(c2 => c2.id === 's04c').from + +b.dataset.k)));
+      wrows.forEach((r, j) => { const go6 = () => o.go(CHS.find(c2 => c2.id === 's06b').from + j);
+        r.addEventListener('click', go6); r.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go6(); } }); });
+      // the crew counter: choosing a point on the aircraft takes the passes back into the slot and prints the team's
+      { let ct = 0;
+        cpinsL.forEach(b => b.addEventListener('click', () => {
+          const k2 = +b.dataset.k; if (k2 === ct) return;
+          const old = cteams[ct], nw = cteams[k2]; ct = k2;
+          gsap.to($$('.cpass', old), { yPercent: -145, boxShadow: SH0, duration: RM ? 0 : .45, stagger: .05, ease: 'power2.in', overwrite: true, onComplete: () => { old.style.visibility = 'hidden'; } });
+          nw.style.visibility = 'visible';
+          gsap.fromTo($$('.cpass', nw), { yPercent: -145, boxShadow: SH0 }, { yPercent: 0, boxShadow: SH1, duration: RM ? 0 : .75, delay: RM ? 0 : .45, stagger: .12, ease: 'power2.out', overwrite: true });
+        }));
+        // when the chapter is left, the counter goes back to the first crew (the act's own record expects it)
+        // v2.16: the open crew goes back into the slot the same way the act takes the first one away (never a cut);
+        // only then is the counter set back to the first crew, out of sight
+        A2X.crewReset = () => { if (!ct) return; const old = cteams[ct]; ct = 0;
+          const fin = () => { cteams.forEach((g, j) => { if (j) { g.style.visibility = 'hidden'; gsap.set($$('.cpass', g), { yPercent: -145, boxShadow: SH0, overwrite: true }); } });
+            cteams[0].style.visibility = 'visible'; cpinsL.forEach(b => { const on = +b.dataset.k === 0; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); }); };
+          if (RM) { fin(); return; }
+          cteams[0].style.visibility = 'hidden';
+          gsap.to($$('.cpass', old), { yPercent: -145, boxShadow: SH0, duration: .45, stagger: .04, ease: 'power2.in', overwrite: true, onComplete: fin }); }; }
       // the gallery drifts slowly on its own while it is on screen and at rest (hover, focus, drag or the viewer pause it)
       // 7 nov: the drum turns for as long as it is on screen, also while it comes in and while it leaves, so the
       // entrance eases into the drift and the exit accelerates out of it with no stop in between
@@ -1627,7 +1927,7 @@
     closeIx();
     el.setAttribute('tabindex', '-1'); el.focus({ preventScroll: true });
     // targets inside Act 1 (portada, briefing, agenda) are steps of the pinned act
-    const act = window.__act && window.__act(), ACTSTEP = { s00: 0, s01: 1, s02a: 2 };
+    const act = window.__act && window.__act(), ACTSTEP = { s00: 0, s01: 1, s02: 2, s02a: 3 };
     if (act && id in ACTSTEP) {
       const step = ACTSTEP[id], y = scrollY, inAct = y >= act.st.start - 2 && y <= act.st.end + 2;
       if (inAct && Math.abs(step - act.at) <= 1) { act.go(step); return; }
@@ -1653,6 +1953,15 @@
   };
   gsap.ticker.add(ink); ink();
 
+  /* ---------- image viewers (04.03 Implementation): a thumb shows its picture in the main frame ---------- */
+  document.querySelectorAll('[data-iv]').forEach(v => {
+    const pics = v.querySelectorAll('.ivm img[data-vi]'), btns = v.querySelectorAll('.ivt button[data-vi]');
+    btns.forEach(b => b.addEventListener('click', () => {
+      pics.forEach(p => p.classList.toggle('on', p.dataset.vi === b.dataset.vi));
+      btns.forEach(x => { const sel = x === b; x.classList.toggle('on', sel); x.setAttribute('aria-pressed', sel); });
+    }));
+  });
+
   /* ---------- credentials gallery: centred slides, arrows, drag, counter, caption ---------- */
   document.querySelectorAll('[data-a=gal]').forEach(g => {
     const t = g.querySelector('[data-gal-track]'), s = [...t.children], bar = g.parentElement.parentElement;
@@ -1660,7 +1969,7 @@
     const cnt = scope.querySelector('[data-gal-cnt]'), cap = scope.querySelector('[data-gal-cap]'), pv = scope.querySelector('[data-gal-prev]'), nx = scope.querySelector('[data-gal-next]');
     const step = () => (s[1].offsetLeft - s[0].offsetLeft) || 1, idx = () => clamp(Math.round(t.scrollLeft / step()), 0, s.length - 1);
     let on = -1;
-    const upd = () => { const i = idx(); if (i === on) return; on = i; s.forEach((li, j) => li.classList.toggle('on', j === i)); if (th.length) thMark(i); if (cnt) cnt.textContent = (i + 1) + ' de ' + s.length; if (cap) cap.textContent = s[i].querySelector('img').alt; if (pv) pv.disabled = i === 0; if (nx) nx.disabled = i === s.length - 1; };
+    const upd = () => { const i = idx(); if (i === on) return; on = i; s.forEach((li, j) => li.classList.toggle('on', j === i)); if (th.length) thMark(i); if (cnt) cnt.textContent = (i + 1) + ' / ' + s.length; if (cap) cap.textContent = s[i].querySelector('img').alt; if (pv) pv.disabled = i === 0; if (nx) nx.disabled = i === s.length - 1; };
     const to = (i) => t.scrollTo({ left: clamp(i, 0, s.length - 1) * step(), behavior: RMQ.matches ? 'auto' : 'smooth' });
     // film strip (laptop, 7 nov): a thumbnail per slide; the active one is marked and kept in view
     const th = $$('[data-gal-thumbs] button', scope);
@@ -1679,10 +1988,10 @@
 
   /* ---------- lightbox: every photo opens full size over the blurred page (6 nov) ---------- */
   (() => {
-    const SEL = '#s00 [data-a^=ph], #s02b figure img, #s03c img[src*="dg-"], #s03c img[src*="plan-"], #s04a img[alt]:not([alt=""]), #s04b [data-a=pan] img, #s05 img[alt]:not([alt=""]), #s08 [data-gal-track] img';
+    const SEL = '#s00 [data-a^=ph], #s03c img[src*="mk-"], #s03c img[src*="dg-"], #s03c img[src*="plan-"], #s04a .ivm img, #s04a .imap img, #s04c .capp img, #s04b [data-a=pan] img, #s05 img[alt]:not([alt=""]), #s08 [data-gal-track] img';
     const box = document.createElement('div');
-    box.id = 'lbx'; box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true'); box.setAttribute('aria-label', 'Imagen ampliada'); box.hidden = true;
-    box.innerHTML = '<div class="lb-bg"></div><img class="lb-im" alt=""><p class="lb-cap"></p><button type="button" class="lb-x" aria-label="Cerrar imagen">' +
+    box.id = 'lbx'; box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true'); box.setAttribute('aria-label', 'Enlarged image'); box.hidden = true;
+    box.innerHTML = '<div class="lb-bg"></div><img class="lb-im" alt=""><p class="lb-cap"></p><button type="button" class="lb-x" aria-label="Close image">' +
       '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button>';
     document.body.appendChild(box);
     const bg = box.querySelector('.lb-bg'), im = box.querySelector('.lb-im'), cap = box.querySelector('.lb-cap'), x = box.querySelector('.lb-x');
@@ -1691,16 +2000,18 @@
     const op = (n) => { let o = 1; for (let p = n; p && p.nodeType === 1; p = p.parentElement) o *= +getComputedStyle(p).opacity; return o; };
     const shown = (el) => { const sib = [...el.parentElement.children].filter(n => n.classList.contains('lb-t')); return sib.length > 1 ? sib.reduce((a, b) => (op(b) > op(a) ? b : a)) : el; };
     const ok = (el) => el && el.matches && el.matches(SEL) && !(el.closest('[data-gal-track] li') && !el.closest('li.on'));
-    $$(SEL).forEach(el => { el.classList.add('lb-t'); if (!el.closest('button,a')) { el.tabIndex = 0; el.setAttribute('role', 'button'); el.setAttribute('aria-label', 'Ampliar imagen: ' + (el.alt || '')); } });
+    $$(SEL).forEach(el => { el.classList.add('lb-t'); if (!el.closest('button,a')) { el.tabIndex = 0; el.setAttribute('role', 'button'); el.setAttribute('aria-label', 'Enlarge image: ' + (el.alt || '')); } });
     const fit = () => {
       const m = innerWidth < 768 ? 16 : 56, capH = innerWidth < 768 ? 64 : 72, nw = im.naturalWidth || 1600, nh = im.naturalHeight || 900;
       const s = Math.min((innerWidth - m * 2) / nw, (innerHeight - m - capH) / nh, 1.6), w = nw * s, h = nh * s;
       return { w, h, l: (innerWidth - w) / 2, t: (m + innerHeight - capH - h) / 2 };
     };
-    const from = (r, f) => ({ x: r.left + r.width / 2 - (f.l + f.w / 2), y: r.top + r.height / 2 - (f.t + f.h / 2), scale: Math.max(r.width / f.w, r.height / f.h) });
+    // v2.13: the enlarged photo grows from inside the clicked one (fitted, never cropped differently) and fades in
+    const from = (r, f) => ({ x: r.left + r.width / 2 - (f.l + f.w / 2), y: r.top + r.height / 2 - (f.t + f.h / 2), scale: Math.min(r.width / f.w, r.height / f.h) });
     const open = (el) => {
       if (busy || window.__lbOpen) return;
       src = el; window.__lbOpen = true; busy = true;
+      gsap.set(im, { opacity: 0 }); im.removeAttribute('src');
       im.src = el.currentSrc || el.src; im.alt = el.alt || ''; cap.textContent = el.alt || '';
       box.hidden = false; lenis && lenis.stop(); root.classList.add('lb-on');
       const go = () => {
@@ -1709,10 +2020,11 @@
         const tl = gsap.timeline({ onComplete: () => { busy = false; x.focus({ preventScroll: true }); } });
         if (RMQ.matches) tl.fromTo([bg, im, cap, x], { opacity: 0 }, { opacity: 1, duration: .2 });
         else tl.fromTo(bg, { opacity: 0 }, { opacity: 1, duration: .5, ease: 'power2.out' }, 0)
-          .fromTo(im, { ...a, opacity: .4 }, { x: 0, y: 0, scale: 1, opacity: 1, duration: .7, ease: 'power3.inOut' }, 0)
+          .fromTo(im, { ...a, opacity: 0 }, { x: 0, y: 0, scale: 1, duration: .65, ease: 'power3.inOut' }, 0)
+          .to(im, { opacity: 1, duration: .3, ease: 'power1.out' }, 0)
           .fromTo([cap, x], { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: .45, ease: 'power2.out', stagger: .05 }, .45);
       };
-      im.complete && im.naturalWidth ? go() : im.addEventListener('load', go, { once: true });
+      (im.decode ? im.decode().catch(() => {}) : Promise.resolve()).then(go);
     };
     const close = () => {
       if (!window.__lbOpen || busy) return;
@@ -1722,14 +2034,17 @@
       const f = fit(), r = src.getBoundingClientRect(), vis = r.bottom > 0 && r.top < innerHeight && r.width > 2, a = from(r, f);
       gsap.timeline({ onComplete: done })
         .to([cap, x], { opacity: 0, duration: .2, ease: 'power2.in' }, 0)
-        .to(im, vis ? { ...a, opacity: .2, duration: .55, ease: 'power3.inOut' } : { opacity: 0, scale: .96, duration: .35, ease: 'power2.in' }, 0)
+        .to(im, vis ? { ...a, duration: .5, ease: 'power3.inOut' } : { scale: .96, duration: .35, ease: 'power2.in' }, 0)
+        .to(im, { opacity: 0, duration: .3, ease: 'power1.in' }, vis ? .22 : 0)
         .to(bg, { opacity: 0, duration: .45, ease: 'power2.inOut' }, .1);
     };
     // a click only opens when the pointer did not drag (gallery, drum, credentials)
     addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY }; }, true);
     addEventListener('click', e => {
-      const el = e.target.closest && (e.target.closest('.lb-t') || (e.target.closest('[data-gal-track] li') || {}).firstElementChild);
+      let el = e.target.closest && (e.target.closest('.lb-t') || (e.target.closest('[data-gal-track] li') || {}).firstElementChild);
       if (!ok(el)) return;
+      const vis = (n) => op(n) > .5 && getComputedStyle(n).visibility !== 'hidden';
+      if (!vis(el)) { const hit = document.elementsFromPoint(e.clientX, e.clientY).map(n => n.closest && n.closest('.lb-t')).find(n => n && ok(n) && vis(n)); if (!hit) return; el = hit; }
       if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) return;
       e.preventDefault(); e.stopPropagation(); open(shown(el));
     }, true);

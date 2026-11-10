@@ -26,7 +26,7 @@ img{max-width:none}
 :root[data-ink=dark]{--c-fg:var(--airbus);--c-ln:rgba(0,32,91,.6);color-scheme:light}
 [data-th]{--fg:#ffffff;--fg2:#c9d3e3;--ln:rgba(201,211,227,.6);--fa:rgba(201,211,227,.16);--acc:var(--signal);--hi:#ffffff;--hifg:var(--airbus);--panel:#243a5e;--panelfg:#fff}
 :root[data-ink=dark] [data-th]{--fg:var(--airbus);--fg2:#3c5078;--ln:rgba(0,32,91,.5);--fa:rgba(0,32,91,.12);--acc:var(--airbus);--hi:var(--airbus);--hifg:#fff;--panel:var(--airbus);--panelfg:#fff}
-.ink-d,.chip .lg img.ink-d{display:none}:root[data-ink=dark] .ink-d,:root[data-ink=dark] .chip .lg img.ink-d{display:block}:root[data-ink=dark] .ink-l,:root[data-ink=dark] .chip .lg img.ink-l{display:none}
+.ink-d{display:none}:root[data-ink=dark] .ink-d{display:block}:root[data-ink=dark] .ink-l{display:none}/* v2.16: the brand chip crossfades its two logos when the page tone changes */.chip .lg{position:relative}.chip .lg img.ink-l,.chip .lg img.ink-d{display:block!important;transition:opacity .5s}.chip .lg img.ink-d{position:absolute;left:0;top:50%;transform:translateY(-50%)}.chip .lg img.ink-d{opacity:0}:root[data-ink=dark] .chip .lg img.ink-d{opacity:1}:root[data-ink=dark] .chip .lg img.ink-l{opacity:0}
 
 /* skip link */
 .skip{position:fixed;left:16px;top:-80px;z-index:90;padding:12px 16px;background:#fff;color:var(--airbus);font-weight:500;text-decoration:none}
@@ -34,9 +34,9 @@ img{max-width:none}
 
 /* fixed layer: brand + index; only its background changes */
 .fx{position:fixed;left:48px;right:48px;top:48px;display:flex;justify-content:space-between;z-index:50;pointer-events:none}
-.chip{pointer-events:auto;display:flex;align-items:center;gap:16px;height:44px;padding:0 16px;background:var(--c-chip);color:var(--c-fg);border:1px solid var(--c-ln);font:inherit;text-decoration:none;transition:background-color .15s,color .15s,border-color .15s}
+.chip{pointer-events:auto;display:flex;align-items:center;gap:16px;height:44px;padding:0 16px;background:var(--c-chip);color:var(--c-fg);border:1px solid var(--c-ln);font:inherit;text-decoration:none;transition:background-color .5s,color .5s,border-color .5s}
 .chip .lg{display:flex;align-items:center}.chip .lg img{display:block;width:auto}
-.chip i.sep{display:block;width:1px;height:20px;background:var(--c-ln)}
+.chip i.sep{display:block;width:1px;height:20px;background:var(--c-ln);transition:background-color .5s}
 .chip.ix{width:280px;justify-content:flex-end;cursor:pointer}
 .chip .chap{margin-right:auto;font-size:12px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
 .chip .lab{font-size:12px;font-weight:500;letter-spacing:.12em;text-transform:uppercase}
@@ -92,7 +92,7 @@ svg.dr{position:absolute;left:0;top:0;overflow:visible}
 .abs{position:absolute}
 
 /* controls */
-.tab,.btn{display:flex;align-items:center;justify-content:center;height:44px;min-width:44px;padding:0 16px;border:1px solid var(--ln);background:transparent;color:var(--fg);font:inherit;font-size:14px;cursor:pointer;transition:background-color .15s,color .15s,border-color .15s}
+.tab,.btn{display:flex;align-items:center;justify-content:center;height:44px;min-width:44px;padding:0 16px;border:1px solid var(--ln);background:transparent;color:var(--fg);font:inherit;font-size:14px;cursor:pointer;transition:background-color .5s,color .5s,border-color .5s}
 .tab[aria-selected=true],.tab[aria-pressed=true]{background:var(--hi);color:var(--hifg);border-color:var(--hi)}
 @media (hover:hover){.tab:hover,.btn:hover{border-color:var(--fg)}}
 .tab:active,.btn:active{transform:translateY(1px)}
@@ -110,7 +110,7 @@ svg.dr{position:absolute;left:0;top:0;overflow:visible}
 
 /* ---------- mobile band ---------- */
 @media (max-width:767px) and (prefers-reduced-motion:no-preference) and (min-height:561px){.stage-m .steps .btn{display:none}.stage-m .steps{gap:12px}}
-@media (max-width:767px), (max-height:560px){
+@media (max-width:767px), (max-height:560px), (orientation:portrait) and (max-width:1199px){
   .fx{left:20px;right:20px;top:20px}
   .chip{gap:8px}
   .chip .lg img[height="16"]{height:13px}.chip .lg img[height="26"]{height:22px}
@@ -165,10 +165,10 @@ html.lenis,html.lenis body{height:auto}
 [data-bgx]{display:none!important}
 /* boarding pass: scan beam, stamp, glare */
 .scan{position:absolute;z-index:3;background:#9fd0ff;box-shadow:0 0 14px 3px rgba(159,208,255,.85);border-radius:2px;pointer-events:none;opacity:0}
-.stamp{position:absolute;z-index:3;color:#0b3a8f;pointer-events:none;opacity:0;mix-blend-mode:multiply}.stamp svg text{font-family:'Inter Tight',Arial,sans-serif}
+.stamp{position:absolute;z-index:3;color:#0b3a8f;pointer-events:none;opacity:0}.stamp svg text{font-family:'Inter Tight',Arial,sans-serif}
 .stamp svg{display:block;width:100%;height:100%;overflow:visible;font-family:'Inter Tight',Arial,sans-serif}
-.stage-l #s01 .stamp{left:652px;top:232px;width:292px;height:292px}
-.stage-m #s01 .stamp{right:-42px;top:44%;width:150px;height:150px}
+.stage-l #s01 .stamp{left:556px;top:338px;width:200px;height:200px;mix-blend-mode:multiply}
+.stage-m #s01 .stamp{right:-26px;top:60%;width:118px;height:118px}
 .glare{position:absolute;inset:0;z-index:4;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .4s;background:radial-gradient(circle at var(--gx,50%) var(--gy,50%),rgba(255,255,255,.55),rgba(255,255,255,0) 45%);mix-blend-mode:soft-light}
 /* social event: postcards lift under the pointer (individual properties compose with GSAP's transform) */
 #s05 .pc{transition:translate .3s cubic-bezier(.2,.7,.2,1),scale .3s cubic-bezier(.2,.7,.2,1),box-shadow .3s}
@@ -243,7 +243,7 @@ html.freeze,html.freeze body{overflow:hidden;overscroll-behavior:none}
 #lbx .lb-x{position:absolute;top:20px;right:20px;width:48px;height:48px;display:grid;place-items:center;border:1px solid rgba(228,235,244,.5);background:rgba(0,28,59,.4);color:#fff;cursor:pointer;transition:border-color .15s,background-color .15s}
 @media (hover:hover){#lbx .lb-x:hover{border-color:#fff;background:rgba(0,28,59,.7)}}
 #lbx .lb-x:focus-visible{outline:2px solid var(--signal);outline-offset:3px}
-@media (max-width:767px){#lbx .lb-cap{left:16px;right:16px;bottom:16px;font-size:14px}#lbx .lb-x{top:12px;right:12px;width:44px;height:44px}}
+@media (max-width:767px), (orientation:portrait) and (max-width:1199px){#lbx .lb-cap{left:16px;right:16px;bottom:16px;font-size:14px}#lbx .lb-x{top:12px;right:12px;width:44px;height:44px}}
 @media (forced-colors:active){#lbx .lb-bg{background:Canvas}}
 /* act 2 (laptop): the scenes are layers of one pinned stage */
 #act2{position:relative;height:100vh;height:100svh;overflow:hidden}
@@ -254,3 +254,8 @@ html.freeze,html.freeze body{overflow:hidden;overscroll-behavior:none}
 .a2l[style*="visibility: hidden"] *{visibility:hidden!important;pointer-events:none!important}
 /* 7 nov: the last pieces of the page rise into place; their offset must not lengthen the page (the bottom jumped) */
 footer.ft,.ft{overflow:clip}
+/* 7 nov · tablets in portrait take the phone composition (the 1440×800 canvas would sit in a band in the middle with
+   8–9 px text); the column is zoomed so type and touch targets keep tablet sizes */
+@media (orientation:portrait) and (min-width:600px) and (max-width:1199px) and (min-height:561px){.stage-m{zoom:1.2}}
+@media (orientation:portrait) and (min-width:800px) and (max-width:1199px) and (min-height:561px){.stage-m{zoom:1.35}}
+@media (orientation:portrait) and (min-width:600px) and (max-width:1199px) and (min-height:561px){#s08 .gal{--sw:100%}}
