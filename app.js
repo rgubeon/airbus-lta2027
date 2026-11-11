@@ -878,18 +878,20 @@
           .from(wp, { opacity: 0, scale: .6, transformOrigin: '50% 50%', duration: .7, stagger: .1, ease: 'power3.out' }, 1.4);
         if (has(box)) tl.from(box, { opacity: 0, y: -10, duration: .7, ease: 'power3.out' }, 1.2);
       }, 'top 70%');
-      stepper($('#s03a'), 4, (tl, S) => {
+      // v2.30: one step per waypoint (six), on phones too
+      const NW = $$('[data-a=wp]', stageOf($('#s03a'))).length || 4;
+      stepper($('#s03a'), NW, (tl, S) => {
         const seg = $$('[data-a=seg]', S), ring = $('[data-a=ring]', S), wp = $$('[data-a=wp]', S), wpl = $$('[data-a=wpl]', S);
         if (!RM) {
           gsap.set([...wp.slice(1), ...wpl.slice(1)], { opacity: $('.kbox', S) ? 0 : .3 });   // v2.20 mobile: the waypoints ahead wait, faint
-          for (let i = 0; i < 3; i++) tl.to(wp[i + 1], { opacity: 1, duration: .35, ease: 'sine.out' }, i + .5).to(wpl[i + 1], { opacity: 1, duration: .35, ease: 'sine.out' }, i + .58);
+          for (let i = 0; i < NW - 1; i++) tl.to(wp[i + 1], { opacity: 1, duration: .35, ease: 'sine.out' }, i + .5).to(wpl[i + 1], { opacity: 1, duration: .35, ease: 'sine.out' }, i + .58);
         }
         const cards = $$('[data-a=kcard]', S).sort((x, y) => x.dataset.k - y.dataset.k), mk = $$('[data-a=mk]', S);
         own(cards); own($$('.kline', S));
         const kb = cards.map(cd => $('.kb', cd)), km = cards.map(cd => $('.km', cd)), kl = $('.kline', S);
         if (cards.length && $('.kbox', S)) {
           gsap.set(cards.slice(1), { autoAlpha: 0 });
-          for (let i = 0; i < 3; i++) {
+          for (let i = 0; i < NW - 1; i++) {
             const bb = wp[i + 1].getBBox();
             tl.to(seg[i + 1], { attr: { 'stroke-dashoffset': 0 }, duration: .95, ease: 'sine.inOut' }, i)
               .to(ring, { attr: { cx: bb.x + bb.width / 2, cy: bb.y + bb.height / 2 }, duration: .95, ease: 'sine.inOut' }, i)
@@ -902,7 +904,7 @@
           gsap.set(km[0], { backgroundColor: 'var(--acc)' });
           if (kl) gsap.set(kl, { scaleY: 0 });
         }
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < NW - 1; i++) {
           const bb = wp[i + 1].getBBox();
           // the leg is drawn and the ring travels with one soft curve
           tl.to(seg[i + 1], { attr: { 'stroke-dashoffset': 0 }, duration: .95, ease: 'sine.inOut' }, i)
@@ -912,7 +914,7 @@
             tl.to(kb[i], { height: 0, autoAlpha: 0, duration: .5, ease: 'power2.inOut' }, i)
               .to(cards[i], { opacity: .55, duration: .5, ease: 'power1.inOut' }, i)
               .to(km[i], { backgroundColor: 'var(--fg2)', boxShadow: 'inset 0 0 0 2px var(--fg2)', duration: .5 }, i);
-            if (kl) tl.to(kl, { scaleY: (i + 1) / 3, duration: .8, ease: 'sine.inOut' }, i + .1);
+            if (kl) tl.to(kl, { scaleY: (i + 1) / (NW - 1), duration: .8, ease: 'sine.inOut' }, i + .1);
             tl.fromTo(cards[i + 1], { autoAlpha: 0, y: 14 }, { autoAlpha: 1, y: 0, duration: .6, ease: 'power3.out', immediateRender: false }, i + .4)
               .fromTo(km[i + 1], { backgroundColor: 'rgba(0,0,0,0)' }, { backgroundColor: 'var(--acc)', duration: .4, immediateRender: false }, i + .55);
           }
@@ -927,14 +929,18 @@
       const sec = $('#s03b'), S = stageOf(sec), ckv = $('.ckv', S), kvb = ckv && $('[data-a=kv]', ckv);
       if (kvb) {
         const kvl = (q) => $$(`.kl[data-l=${q}]`, kvb), kvi = (q) => $$(`.kl[data-l=${q}] .ki`, kvb);
-        own([kvb]);
+        // v2.30 (phones): the seal comes first, then the aircraft and their landscapes, then the line
+        const kbd = $('[data-a=kbadge]', ckv), ktx = $(':scope > p', ckv);
+        own([kvb, kbd, ktx]);
         enter(ckv, (tl) => {
-          if (RM) { tl.from(kvb, { opacity: 0, duration: .2 }); return; }
-          tl.from(kvl('rearL'), { xPercent: -70, opacity: 0, duration: 1.2, ease: 'expo.out' }, 0)
-            .from(kvl('rearR'), { xPercent: 70, opacity: 0, duration: 1.2, ease: 'expo.out' }, 0)
-            .fromTo(kvi('win'), { clipPath: 'inset(48% 48% 48% 48% round 14px)', scale: .86, opacity: 0 }, { clipPath: 'inset(0% 0% 0% 0% round 0px)', scale: 1, opacity: 1, duration: 1.15, ease: 'expo.out', stagger: { each: .14, from: 'center' }, immediateRender: true }, .15)
-            .from(kvl('c295'), { xPercent: -38, yPercent: 34, rotation: -5, opacity: 0, duration: 1.5, ease: 'power3.out' }, .5)
-            .from(kvl('cn235'), { xPercent: 55, yPercent: -40, rotation: 7, opacity: 0, duration: 1.35, ease: 'power3.out' }, .75);
+          if (RM) { tl.from([kbd, kvb, ktx].filter(Boolean), { opacity: 0, duration: .2 }); return; }
+          if (kbd) tl.from(kbd, { opacity: 0, scale: .7, rotation: -20, duration: .9, ease: 'back.out(1.6)' }, 0);
+          if (ktx) tl.from(ktx, { opacity: 0, y: 18, duration: .8, ease: 'power3.out' }, 1.6);
+          tl.from(kvl('rearL'), { xPercent: -70, opacity: 0, duration: 1.2, ease: 'expo.out' }, 0.35)
+            .from(kvl('rearR'), { xPercent: 70, opacity: 0, duration: 1.2, ease: 'expo.out' }, 0.35)
+            .fromTo(kvi('win'), { clipPath: 'inset(48% 48% 48% 48% round 14px)', scale: .86, opacity: 0 }, { clipPath: 'inset(0% 0% 0% 0% round 0px)', scale: 1, opacity: 1, duration: 1.15, ease: 'expo.out', stagger: { each: .14, from: 'center' }, immediateRender: true }, 0.50)
+            .from(kvl('c295'), { xPercent: -38, yPercent: 34, rotation: -5, opacity: 0, duration: 1.5, ease: 'power3.out' }, 0.85)
+            .from(kvl('cn235'), { xPercent: 55, yPercent: -40, rotation: 7, opacity: 0, duration: 1.35, ease: 'power3.out' }, 1.10);
         }, 'top 75%');
       }
     } catch (err) { console.warn('04.01 Concept', err); }
@@ -1942,7 +1948,14 @@
     } catch (err) { console.warn('entrances', err); }
 
 
-      // v2.29: a clip marked data-io (phones) plays only while on screen
+      // v2.30: the phone chart is framed to its box: the whole route and the heading arc when there is room; on short
+    // screens the arc gives way first, never the waypoints (the chart is centred on heading 027, bottom at the aircraft)
+    $$('svg.ndm').forEach(svg => { const box = svg.parentElement; if (!box || !('ResizeObserver' in window)) return;
+      const fit = () => { const W = box.clientWidth, H = box.clientHeight; if (!W || !H) return;
+        const full = Math.min(W / 540, H / 618), s = full >= .6 ? full : Math.max(full, Math.min(W / 470, H / 470));
+        svg.setAttribute('viewBox', `${(720 - W / (2 * s)).toFixed(1)} ${(880 - H / s).toFixed(1)} ${(W / s).toFixed(1)} ${(H / s).toFixed(1)}`); };
+      new ResizeObserver(fit).observe(box); fit(); });
+    // v2.29: a clip marked data-io (phones) plays only while on screen
     if ('IntersectionObserver' in window) { const vio = new IntersectionObserver((es) => es.forEach(e => { const v = e.target;
         if (e.isIntersecting) { const pp = v.play(); if (pp && pp.catch) pp.catch(() => {}); } else if (!v.paused) v.pause(); }), { threshold: .35 });
       $$('video[data-io]').forEach(v => vio.observe(v)); }
