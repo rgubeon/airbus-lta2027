@@ -22,6 +22,31 @@
   fit();
   addEventListener('resize', fit);
 
+  /* v2.20 (11 nov): landscape tablets keep the laptop canvas and its animations, but the canvas is shown at ~71 %, so
+     its small type gets a lift: every text of 16 px or less inside the canvas grows by the same factor (the hierarchy
+     stays), until it reads at least like 16 px at 84 % on screen. Runs before any scene measures itself. */
+  const TBQ = matchMedia('(pointer:coarse) and (orientation:landscape) and (min-width:900px)');
+  const TIGHT = '#s03b .mfd, #s06b .wgate, #s06b .whint', FULL = '#s01 .pbk';   // the objectives card (back of the pass) is already full
+  const lift = () => {
+    const k = parseFloat(getComputedStyle(root).getPropertyValue('--k')) || 1, f = TBQ.matches ? clamp(.84 / k, 1, 1.22) : 1;
+    root.classList.toggle('tb', f > 1);
+    $$('.stage-l *').forEach(el => {
+      if (el.closest('svg')) return;
+      if (!Array.from(el.childNodes).some(n => n.nodeType === 3 && n.textContent.trim())) return;
+      if (el.dataset.fs0 == null) {
+        if (f === 1) return;
+        const cs = getComputedStyle(el), fs = parseFloat(cs.fontSize); if (fs > 16.5) return;
+        el.dataset.fs0 = fs; el.dataset.lh0 = cs.lineHeight.endsWith('px') ? parseFloat(cs.lineHeight) : '';
+        el.dataset.fsi = el.style.fontSize; el.dataset.lhi = el.style.lineHeight;   // the inline values, to put back
+      }
+      const fs0 = +el.dataset.fs0, lh0 = el.dataset.lh0, g = el.closest(FULL) ? 1 : el.closest(TIGHT) ? 1 + (f - 1) * .35 : f;   // boxes of fixed height lift less
+      el.style.fontSize = f > 1 ? (fs0 * g).toFixed(2) + 'px' : el.dataset.fsi;
+      el.style.lineHeight = f > 1 && lh0 ? (+lh0 * g).toFixed(2) + 'px' : el.dataset.lhi;
+    });
+  };
+  lift();
+  TBQ.addEventListener('change', () => { lift(); ScrollTrigger.refresh(); });
+
   // (v2.11: the touchpoint captions were removed; the old caption fitter is gone)
 
   /* ---------- smooth scroll (wheel only; touch keeps native momentum) ---------- */
@@ -128,6 +153,19 @@
   const ixb = $('#ixb'), ixp = $('#ixp');
   ixb.addEventListener('click', () => { const on = !ixp.classList.contains('on'); ixp.classList.toggle('on', on); ixb.setAttribute('aria-expanded', on); });
   $$('#ixp a').forEach(a => a.addEventListener('click', () => { ixp.classList.remove('on'); ixb.setAttribute('aria-expanded', false); }));
+  // v2.22: when the index opens, the section on screen is marked (the deepest entry that matches it)
+  const ixHere = () => {
+    let id = null;
+    const a1 = window.__act && window.__act(), a2 = window.__act2 && window.__act2(), y = scrollY;
+    if (a2 && a2.st && y >= a2.st.start - 2 && y <= a2.st.end + 2) { const ch = a2.chs.filter(c => c.from <= a2.at).pop(); id = ch && ch.id; }
+    else if (a1 && a1.st && y >= a1.st.start - 2 && y <= a1.st.end + 2) id = ['s00', 's01', 's02', 's02a'][Math.min(a1.at, 3)] || 's02a';
+    else { const e = document.elementFromPoint(innerWidth / 2, innerHeight / 2); const sc = e && e.closest('section[id], .lay[id], .mlay[id]'); id = sc && sc.id; }
+    const links = $$('#ixp a'); let hit = null;
+    links.forEach(l => { if (l.getAttribute('href') === '#' + id) hit = l; });   // the last match is the most specific
+    links.forEach(l => l.setAttribute('aria-current', l === hit ? 'true' : 'false'));
+    if (hit) hit.scrollIntoView({ block: 'nearest' });
+  };
+  ixb.addEventListener('click', () => { if (ixp.classList.contains('on')) ixHere(); });
 
   /* ---------- one gesture = one step (shared by every pinned stretch) ---------- */
   let STEPPERS = [];
@@ -411,7 +449,7 @@
         <feTurbulence type="fractalNoise" baseFrequency=".04" numOctaves="1" seed="3" result="w"/><feDisplacementMap in="ink" in2="w" scale="2"/></filter></defs>
         <g filter="url(#${sid}f)" fill="none" stroke="currentColor">
         <circle cx="100" cy="100" r="97" stroke-width="4"/><circle cx="100" cy="100" r="90" stroke-width="1.4"/>
-        <text font-size="11.5" font-weight="800" letter-spacing="2.6" fill="currentColor" stroke="none"><textPath href="#${sid}">SEVILLE · SVQ · 1–3 JUNE 2027 · CLEARED ·</textPath></text>
+        <text font-size="11.5" font-weight="800" letter-spacing="2.6" fill="currentColor" stroke="none"><textPath href="#${sid}">SEVILLE · LEZL · 1–3 JUNE 2027 · CLEARED ·</textPath></text>
         <circle cx="100" cy="100" r="66" stroke-width="1.6"/>
         <image href="img/kv/badge.webp" x="38" y="38" width="124" height="124" filter="url(#${sid}i)"/></g></svg>`;
       card.appendChild(stamp);
@@ -812,7 +850,7 @@
       stepper($('#s03a'), 4, (tl, S) => {
         const seg = $$('[data-a=seg]', S), ring = $('[data-a=ring]', S), wp = $$('[data-a=wp]', S), wpl = $$('[data-a=wpl]', S);
         if (!RM) {
-          gsap.set([...wp.slice(1), ...wpl.slice(1)], { opacity: 0 });
+          gsap.set([...wp.slice(1), ...wpl.slice(1)], { opacity: $('.kbox', S) ? 0 : .3 });   // v2.20 mobile: the waypoints ahead wait, faint
           for (let i = 0; i < 3; i++) tl.to(wp[i + 1], { opacity: 1, duration: .35, ease: 'sine.out' }, i + .5).to(wpl[i + 1], { opacity: 1, duration: .35, ease: 'sine.out' }, i + .58);
         }
         const cards = $$('[data-a=kcard]', S).sort((x, y) => x.dataset.k - y.dataset.k), mk = $$('[data-a=mk]', S);
@@ -1036,7 +1074,8 @@
         dash(out, 1.6, 0); dash(inn, 1.1, .5, .6);
         if (has($$('.pin[data-a=hs]', S))) tl.from($$('.pin[data-a=hs]', S), { scale: .7, opacity: 0, duration: .7, stagger: .1, ease: 'power3.out' }, 1.1);
         tl.add(() => { shown = true; drawLine(cur, 1); }, 1.5);
-        if (has($$('.mall .tcard', S))) tl.from($$('.mall .tcard', S), { y: 30, opacity: 0, duration: .7, stagger: .1, ease: 'power3.out' }, .6);
+        // v2.20: explicit end state (a from() reads its end lazily, and could read the hidden entrance state)
+        if (has($$('.mall .tcard', S))) tl.fromTo(own($$('.mall .tcard', S)), { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: .7, stagger: .1, ease: 'power3.out', immediateRender: false }, .6);
         if (CAP) { shown = true; const l = lineOf(cur); if (l) gsap.set(l, { opacity: 1, attr: { 'stroke-dashoffset': 0 } }); }
         if (has($$('.tlist .tab', S))) tl.from($$('.tlist .tab', S), { y: 16, opacity: 0, duration: .6, stagger: .07, ease: 'power3.out' }, 1.2);
         if (has($$('.cslot', S))) tl.from($$('.cslot', S), { y: 30, opacity: 0, duration: .8, ease: 'power3.out' }, 1.4);
@@ -1211,7 +1250,7 @@
       /* v2.7: the central window of the KV grows into the landscape that carries the touchpoints */
       const tland = $('.tland', Ly('s03c')), tli = tland && $('img', tland), tsc = tland && $('i', tland), tpa = $('.tpa', dS);
       const w2 = kvi('win')[1], w2pi = w2 && $('.pi', w2), Q = { e: 0, par: 0 }, QP = { x: 0, y: 0 };
-      let q0 = null;
+      let q0 = null, qpS = 0, qpT = 0;
       const qnum = (el, k) => (el.dataset[k] || '').split(' ').map(Number);
       const qcover = (lr) => { const w = Math.max(lr.width, lr.height * 1.5) * 1.12, h = w / 1.5; return { x: (lr.width - w) / 2, y: (lr.height - h) / 2, w, h }; };
       const qmeasure = (lr) => {
@@ -1223,7 +1262,7 @@
       const qrender = () => {
         if (!tland || !w2 || !w2pi) return;
         const vis = Q.e > 0 && Ly('s03c').style.visibility !== 'hidden';
-        if (!vis) { if (tland.style.visibility !== 'hidden') tland.style.visibility = 'hidden'; q0 = null; return; }
+        if (!vis) { if (tland.style.visibility !== 'hidden') tland.style.visibility = 'hidden'; q0 = null; qpS = Q.par; return; }
         tland.style.visibility = 'visible';
         const lr = tland.getBoundingClientRect(), cv = qcover(lr), e = Q.e;
         if (tsc) tsc.style.opacity = (e * e).toFixed(3);
@@ -1241,7 +1280,10 @@
         const rng = (cv.h - lr.height) / 2;
         // (the drift only applies once the window has opened: during the growth the photo stays exactly where the KV shows it)
         const ee = e * e;
-        tli.style.transform = `translate3d(${(QP.x * ee).toFixed(1)}px, ${(((.5 - Q.par) * rng * .9 + QP.y) * ee).toFixed(1)}px, 0)`;
+        // v2.25: the drift follows the step through a soft spring (as the agenda's landscape), never in a straight tween
+        const nowq = performance.now(), dtq = Math.min(.05, (nowq - (qpT || nowq)) / 1000 || .016); qpT = nowq;
+        qpS = e < 1 ? Q.par : qpS + (Q.par - qpS) * Math.min(1, dtq * 2.6);
+        tli.style.transform = `translate3d(${(QP.x * ee).toFixed(1)}px, ${(((.5 - qpS) * rng * .9 + QP.y) * ee).toFixed(1)}px, 0)`;
       };
       if (tland && !CAP && matchMedia('(hover: hover) and (pointer: fine)').matches) {
         const qx = gsap.quickTo(QP, 'x', { duration: 1.2, ease: 'power3.out' }), qy = gsap.quickTo(QP, 'y', { duration: 1.2, ease: 'power3.out' });
@@ -1387,6 +1429,7 @@
       const ctS = Sg('s04c'), cbox = $('.cbox', ctS), cnvs = $$('.cnv', ctS), csd = [$('.clab', ctS), ...Array.from($('.csd', ctS).children)].filter(Boolean);
       const avtx = $('.ctx[data-g=av]', ctS), aptx = $('.ctx[data-g=app]', ctS), capp = $('.capp', ctS), cside = $('.cappside', ctS);
       const csb = $$('.csb', ctS).sort((x, y) => x.dataset.k - y.dataset.k);
+      gsap.set(csb[0], { clipPath: 'inset(0% 100% 0% 0% round 10px)' }); gsap.set(cbox, { opacity: 0 });   // hidden until the act gets there
       { const q4 = IP(4); tl.to(Array.from(q4.itx.children), { opacity: 0, y: -10, duration: .35, stagger: .03 }, t).to(ibox, { clipPath: 'inset(0% 0% 100% 0%)', duration: .5, ease: 'power3.in' }, t + .2)
           .to(q4.ivm, { opacity: 0, scale: .94, duration: .5, ease: 'power2.in' }, t).to([q4.ivt, q4.ild], { opacity: 0, duration: .3 }, t); }
       tl.to(SPN[4], { opacity: 0, duration: .3 }, t + .5)
@@ -1399,22 +1442,24 @@
         .fromTo(csb[0], { clipPath: 'inset(0% 100% 0% 0% round 10px)' }, { clipPath: 'inset(0% 0% 0% 0% round 10px)', duration: 1.1, ease: 'power3.inOut', ...IMM }, t + 1.1);
       t += 3.0; marks.push(t); chap('s04c', 3);
       // v2.18: 02 speaker titles · the key visual storyboard slides away and the lower-third storyboard takes its place
-      tl.to(csb[0], { clipPath: 'inset(0% 0% 0% 100% round 10px)', duration: .8, ease: 'power3.inOut' }, t)
-        .fromTo(csb[1], { opacity: 1, clipPath: 'inset(0% 100% 0% 0% round 10px)' }, { clipPath: 'inset(0% 0% 0% 0% round 10px)', duration: .9, ease: 'power3.inOut', ...IMM }, t + .25);
+      // v2.24: one transition for the whole viewer: the next picture wipes in from the left over the current one,
+      // which dims away underneath (storyboard → storyboard → app)
+      tl.fromTo(csb[1], { opacity: 1, clipPath: 'inset(0% 100% 0% 0% round 10px)' }, { clipPath: 'inset(0% 0% 0% 0% round 10px)', duration: 1.0, ease: 'power3.inOut', ...IMM }, t)
+        .to(csb[0], { opacity: 0, duration: .9, ease: 'power2.in' }, t + .1);
       t += 1.4; marks.push(t);
       // 03 event app: the storyboard folds away; the app rises in its place, its features beside it
-      tl.to(cbox, { opacity: 0, scaleY: .02, duration: .6, ease: 'power3.in' }, t)
+      tl.fromTo(capp, { opacity: 1, clipPath: 'inset(0% 100% 0% 0% round 10px)' }, { clipPath: 'inset(0% 0% 0% 0% round 10px)', duration: 1.0, ease: 'power3.inOut', ...IMM }, t)
+        .to(csb[1], { opacity: 0, duration: .9, ease: 'power2.in' }, t + .1)
         .to(avtx, { opacity: 0, y: -12, duration: .5 }, t)
-        .fromTo(aptx, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .8, ...IMM }, t + .55)
-        .fromTo(capp, { opacity: 0, y: 50, scale: .97, transformOrigin: '50% 100%' }, { opacity: 1, y: 0, scale: 1, duration: 1.1, ease: 'power3.out', ...IMM }, t + .7)
-        .fromTo(cside, { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: .8, ...IMM }, t + 1.1);
+        .fromTo(aptx, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .8, ...IMM }, t + .5)
+        .fromTo(cside, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: .8, ...IMM }, t + .8);
       t += 2.4; marks.push(t);
 
       /* ---- event app → social event: the app steps down; the cards are dealt ---- */
       const soS = Sg('s05'), posts = $$('[data-a=post]', soS), fA = A2X.soc.fA, fB = A2X.soc.fB;
       const spn = $$('.spn', soS).sort((a, b) => a.dataset.k - b.dataset.k), stabs = $$('.stab', soS), sback = $('.shead .sback:not(.scont)', soS);
       const grp = (g) => posts.filter(p2 => +p2.dataset.g === g);
-      tl.to([capp, cside], { opacity: 0, y: 30, duration: .7, ease: 'power1.inOut' }, t)
+      tl.to([cbox, capp, cside], { opacity: 0, y: 30, duration: .7, ease: 'power1.inOut' }, t)
         .to([aptx, ...csd], { opacity: 0, y: -12, duration: .5, stagger: .03 }, t);
       layer('s05', 1, t + .9); layer('s04c', 0, t + 1.0);
       const PEEL = { tl: [0, 0, 1, 1], tr: [100, 0, -1, 1], bl: [0, 100, 1, -1], br: [100, 100, -1, -1] };
@@ -1520,17 +1565,21 @@
         .fromTo(cpinsL, { scale: .8, opacity: 0 }, { scale: 1, opacity: 1, duration: .7, stagger: .1, ...IMM }, t + 2.6)
         .fromTo(cslotl, { scaleX: 0, opacity: 0 }, { scaleX: 1, opacity: .35, duration: .7, ease: 'power3.out', ...IMM }, t + 2.7);
       cpall.forEach(el => gsap.set(el, { y: HIDE(el), boxShadow: SH0 }));
-      TP(0).forEach((el, j) => tl.fromTo(el, { y: HIDE(el), boxShadow: SH0 }, { y: 0, boxShadow: SH1, duration: .8, ease: 'power2.out', ...IMM }, t + 3.0 + j * .14));
+      // v2.23.1: every card lands before the step ends (the 4th one used to stop a few px short, cut by the slot)
+      TP(0).forEach((el, j) => tl.fromTo(el, { y: HIDE(el), boxShadow: SH0 }, { y: 0, boxShadow: SH1, duration: .7, ease: 'power2.out', ...IMM }, t + 2.9 + j * .1));
       t += 4.0; marks.push(t); chap('s06', 5);
       for (let k2 = 1; k2 < 5; k2++) {
         TP(k2 - 1).slice().reverse().forEach((el, j) => tl.to(el, { y: HIDE(el), boxShadow: SH0, duration: .45, ease: 'power2.in' }, t + j * .05));
-        TP(k2).forEach((el, j) => tl.fromTo(el, { y: HIDE(el), boxShadow: SH0 }, { y: 0, boxShadow: SH1, duration: .75, ease: 'power2.out', ...IMM }, t + .5 + j * .12));
+        TP(k2).forEach((el, j) => tl.fromTo(el, { y: HIDE(el), boxShadow: SH0 }, { y: 0, boxShadow: SH1, duration: .7, ease: 'power2.out', ...IMM }, t + .45 + j * .1));
         t += 1.6; marks.push(t);
       }
 
       /* ---- crew → work plan (v2, 10 nov): the plane leaves to the left, drawing the timeline behind it; the phases rise in order ---- */
       const wS = Sg('s06b'), whead = Array.from($('.whead', wS).children), wbd = $('.wbd', wS), wrows = $$('.wrow', wS), wgate = $('.wgate', wS), wgks = $$('.wgk', wS);
-      const wbh = $$('.wbd .bh, .wbd .wcols, .whint', wS), wcells = (r) => $$('[data-a=cell]', r), wtx = (r) => $('.c3', r);
+      const wbh = $$('.wbd .bh, .whint', wS), wtx = (r) => $('.c3', r);
+      // v2.23: the nav log's route column: progress line, the filled waypoints and the ring on the active row
+      const wrp = $('.wrp', wS), wring = $('.wring', wS), wdf = $$('.wdf', wS), wdm = $('.wdm', wS), RHW = 54, wfill = (k) => wdf.find(d => +d.dataset.k === k);
+      const wrtAll = [...$$('.wrt > path:not(.wrp):not(.wdf), .wrt > circle', wS), wfill(0)].filter(Boolean);
       // v2.12: the crew leaves first and completely (passes back into the slot, the plane off to the left), then the board
       TP(4).slice().reverse().forEach((el, j) => tl.to(el, { y: HIDE(el), boxShadow: SH0, duration: .5, ease: 'power2.in' }, t + j * .04));
       tl
@@ -1538,29 +1587,36 @@
         .to(plane, { x: -1800, duration: 1.0, ease: 'power3.in' }, t + .2);
       layer('s06b', 1, t + 1.15); layer('s06', 0, t + 1.25);
       t += .35;
-      // v2.13: the departures board drops in, the rows are filled flap by flap; the gate card opens on the event
+      // v2.23: the nav log drops in, the rows and the route come in; the leg card opens
       tl.fromTo(whead, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: .8, stagger: .08, ...IMM }, t + 1.0)
         .fromTo(wbd, { clipPath: 'inset(0% 0% 100% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.0, ease: 'power3.inOut', ...IMM }, t + 1.1)
         .fromTo(wbh, { opacity: 0 }, { opacity: 1, duration: .5, ...IMM }, t + 1.4);
-      wrows.forEach((r, i) => tl.fromTo(r, { opacity: 0, x: -14 }, { opacity: 1, x: 0, duration: .5, ...IMM }, t + 1.5 + i * .07)
-        .fromTo(wcells(r), { rotationX: -90, opacity: .2 }, { rotationX: 0, opacity: 1, duration: .4, stagger: { amount: .35 }, ...IMM }, t + 1.6 + i * .08)
-        .fromTo(wtx(r), { opacity: 0 }, { opacity: 1, duration: .4, ...IMM }, t + 1.8 + i * .08));
+      // v2.24: only the row you are on is at full opacity; the others wait at 50 %
+      wrows.forEach((r, i) => tl.fromTo(r, { opacity: 0, x: -14 }, { opacity: i ? .5 : 1, x: 0, duration: .5, ...IMM }, t + 1.5 + i * .07)
+        .fromTo(wtx(r), { opacity: 0 }, { opacity: 1, duration: .4, ...IMM }, t + 1.6 + i * .07));
+      // the route column: the waypoints pop in down the rows, the ring settles on the first one
+      tl.fromTo(wrtAll, { opacity: 0 }, { opacity: 1, duration: .4, stagger: .04, ...IMM }, t + 1.55)
+        .fromTo(wring, { scale: .4 }, { scale: 1, duration: .6, ease: 'back.out(2)', ...IMM }, t + 2.0);
+      gsap.set(wrp, { attr: { 'stroke-dashoffset': 1 } }); gsap.set(wring, { y: 0 });
       tl.fromTo(wgate, { opacity: 0, clipPath: 'inset(0% 0% 100% 0%)' }, { opacity: 1, clipPath: 'inset(0% 0% 0% 0%)', duration: .8, ease: 'power3.out', ...IMM }, t + 2.3);
-      const WON = { backgroundColor: '#243a5e', boxShadow: 'inset 4px 0 0 #9fd0ff' }, WOFF = { backgroundColor: 'rgba(36,58,94,0)', boxShadow: 'inset 0 0 0 #9fd0ff' };
-      wrows.forEach((r, j) => gsap.set(r, j ? WOFF : WON));
+      const WON = { backgroundColor: '#243a5e', boxShadow: 'inset 4px 0 0 #9fd0ff', opacity: 1 }, WOFF = { backgroundColor: 'rgba(36,58,94,0)', boxShadow: 'inset 0 0 0 #9fd0ff', opacity: .5 };
+      wrows.forEach((r, j) => gsap.set(r, j ? { backgroundColor: WOFF.backgroundColor, boxShadow: WOFF.boxShadow } : { backgroundColor: WON.backgroundColor, boxShadow: WON.boxShadow }));
       t += 3.2; marks.push(t); chap('s06b', 7);
       // v2.14: one flight per step (from the kick-off to the closure); the row lights up, its flaps turn, the gate card
       // changes; a click on a row jumps to its step
       for (let k2 = 0; k2 < 6; k2++) {
         tl.to(wrows[k2], { ...WOFF, duration: .35 }, t)
           .to(wrows[k2 + 1], { ...WON, duration: .35 }, t + .05)
-          .to(wcells(wrows[k2 + 1]), { keyframes: [{ rotationX: -90, duration: .18 }, { rotationX: 0, duration: .22 }], stagger: { amount: .25 } }, t + .05)
+          .to(wrp, { attr: { 'stroke-dashoffset': 1 - (k2 + 1) / 6 }, duration: .8, ease: 'power2.inOut' }, t)
+          .to(wring, { y: RHW * (k2 + 1), duration: .8, ease: 'power2.inOut' }, t)
           .to(wgks[k2], { opacity: 0, y: -8, duration: .35, ease: 'power2.in' }, t)
           .fromTo(wgks[k2 + 1], { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: .5, ease: 'power2.out', ...IMM }, t + .3);
+        if (wfill(k2 + 1)) tl.to(wfill(k2 + 1), { opacity: 1, duration: .3 }, t + .55);
         t += 1.1; marks.push(t);
       }
       // the event's status blinks like a real board while the chapter is on screen
-      { const evs = $$('.wrow.ev .st [data-a=cell]', wS); if (evs.length) { const bl = gsap.to(evs, { opacity: .35, duration: .5, ease: 'steps(1)', repeat: -1, yoyo: true, repeatDelay: .5, paused: true }); A2X.loops.push([bl, 's06b']); } }
+      // the destination waypoint (Seville) pulses softly while the chapter is on screen
+      if (wdm) { const bl = gsap.to(wdm, { opacity: .45, duration: .9, ease: 'sine.inOut', repeat: -1, yoyo: true, paused: true }); A2X.loops.push([bl, 's06b']); }
 
       /* ---- work plan → sustainability: the phases clear; the gauges are drawn ---- */
       const gS = Sg('s07'), gauges = $$('[data-a=gauge]', gS), rims = $$('[data-a=grim]', gS), ticks = $$('[data-a=gtick]', gS);
@@ -1621,6 +1677,9 @@
         gsap.to(fieldState, { amt: FIELD[CHS[ch].id] ?? .7, duration: .8, overwrite: true });
         if (CHS[ch].id === 's05') { const st = i - CHS[ch].from; stabs.forEach((b) => b.classList.toggle('on', +b.dataset.k === st - 1)); snaps.forEach((b) => (b.style.pointerEvents = st === 0 ? 'auto' : 'none')); shd.style.pointerEvents = st === 0 ? 'none' : 'auto'; const sc = $('.sovc', soS); if (sc) sc.style.pointerEvents = st === 0 ? 'auto' : 'none'; }
         if (CHS[ch].id === 's06b') wrows.forEach((r, j) => r.setAttribute('aria-current', j === i - CHS[ch].from ? 'step' : 'false'));
+        // v2.27: only the animation on screen plays, from the start each time it arrives
+        csb.forEach((e, j) => { const v = $('video', e); if (!v) return; const on = CHS[ch].id === 's04c' && i - CHS[ch].from === j;
+          if (on && v.paused) { try { v.currentTime = 0; } catch (_) {} const pp = v.play(); if (pp && pp.catch) pp.catch(() => {}); } else if (!on && !v.paused) v.pause(); });
         if (CHS[ch].id === 's04c') { const st = i - CHS[ch].from; [capp, cside].forEach(e => (e.style.pointerEvents = st === 2 ? 'auto' : 'none')); csb.forEach((e, j) => (e.style.pointerEvents = st === j ? 'auto' : 'none')); }
         if (CHS[ch].id === 's04c') cnvs.forEach((b) => { const on = +b.dataset.k === i - CHS[ch].from; b.classList.toggle('on', on); b.setAttribute('aria-current', on ? 'step' : 'false'); });
         if (CHS[ch].id === 's04a') { const st = i - CHS[ch].from, stop = st ? A2X.istops[st - 1] : [0, 0];
@@ -1658,9 +1717,9 @@
       const JUMPSET = {
         s03c: () => [...mocks.map(e => [e, MV]), [tha, MV], [thb, MV], [tpb, MV], ...rows.map(e => [e, ROW]), ...rows.flatMap(r => $$('[data-a=cell]', r)).map(e => [e, CELL])],
         s05: () => [...posts.map(e => [e, ['clipPath', 'rotation', 'scale']]), ...snaps.map(e => [e, ['opacity', 'left', 'top', 'width', 'height', 'rotation', 'clipPath']]), ...snaps.flatMap(e => nIn(e).map(c2 => [c2, ['opacity']])), [sfr, ['opacity', 'top', 'height']], ...spn.flatMap((e, k2) => kids(k2).map(c2 => [c2, MV])), ...sov.map(e => [e, MV]), [shd, ['opacity', 'y', 'top']], [shlab, MV]],
-        s06b: () => [...wrows.map(e => [e, ['backgroundColor', 'boxShadow']]), ...wgks.map(e => [e, MV]), ...wrows.flatMap(r => wcells(r)).map(e => [e, ['rotationX']])],
+        s06b: () => [...wrows.map(e => [e, ['backgroundColor', 'boxShadow', 'opacity']]), ...wgks.map(e => [e, MV]), [wrp, ['attr']], [wring, ['y']], ...wdf.map(e => [e, ['opacity']])],
         s06: () => [...cpall.map(e => [e, ['y', 'boxShadow']])],
-        s04c: () => [...csb.map(e => [e, ['opacity', 'clipPath']]), [cbox, ['opacity', 'scaleY']], [avtx, MV], [aptx, MV], [capp, ['opacity', 'y', 'scale']], [cside, ['opacity', 'x']]],
+        s04c: () => [...csb.map(e => [e, ['opacity', 'clipPath']]), [cbox, ['opacity', 'y']], [avtx, MV], [aptx, MV], [capp, ['opacity', 'y', 'clipPath']], [cside, ['opacity', 'y']]],
         s04a: () => [...ipans.map(e => [e, ['opacity']]), ...Array.from(SPN[0].children).map(e => [e, MV]), [imap, ['x', 'y', 'scale']], [ibox, ['clipPath', 'height']], ...[ileg, ...ilbs].filter(Boolean).map(e => [e, ['opacity']]), ...ZK.map(k => [zg(k), ['y']]),
           ...[1, 2, 3, 4].flatMap(k => { const q = IP(k); return [[q.ivm, ['opacity', 'scale', 'x', 'y', 'left', 'top', 'width', 'height']], [q.ivt, ['opacity', 'x', 'y', 'left', 'top']], [q.ild, ['opacity']], ...Array.from(q.itx.children).map(e => [e, MV])]; }),
           [IP('p').ipk, ['clipPath']], ...$$('figure', IP('p').ipk).map(e => [e, MV]), ...Array.from(IP('p').itx.children).map(e => [e, MV])],
@@ -1824,6 +1883,7 @@
         const items = [];
         const visit = (el, area) => {
           if (SKIPT.has(el.tagName) || el.hasAttribute('data-bgx') || HANDLED.has(el) || el.classList.contains('seam')) return;
+          if (gsap.getTweensOf(el).length) return;   // v2.20: an element GSAP already animates never gets a second entrance
           const cs = getComputedStyle(el); if (cs.display === 'none' || cs.visibility === 'hidden') return;
           const r = el.getBoundingClientRect(), big = r.width * r.height > area * .45, svg = el.tagName.toLowerCase() === 'svg';
           const cand = !holds(el) && (!big || svg) && (el.dataset.a || el.matches(MATCH) || (el.tagName === 'DIV' && surface(cs)) || (!/^(OL|UL)$/.test(el.tagName) && Array.from(el.children).some(k => k.dataset && k.dataset.a)));
@@ -1869,6 +1929,8 @@
         ScrollTrigger.create({ trigger: sec, start: 'top 55%', onEnter: go(b), onLeaveBack: go(a) });
       });
     }
+    // v2.20: the header band (phones, portrait tablets) steps aside while Act 1 is on screen
+    { const s0 = SECS.find(x => x.id === 's00'); if (s0) ScrollTrigger.create({ trigger: trig(s0), start: 'top top', end: 'bottom 76px', onToggle: s => root.classList.toggle('nob', s.isActive) }); }
     // chapter label and field presence
     SECS.forEach(sec => ScrollTrigger.create({ trigger: trig(sec), start: 'top center', end: 'bottom center', onToggle: s => {
       if (!s.isActive) return;
@@ -1894,22 +1956,25 @@
   });
 
   /* ---------- index, anchors, back to top ---------- */
+  let jumping = false, jumpNext = null;
   const closeIx = () => { if (ixp.classList.contains('on')) { ixp.classList.remove('on'); ixb.setAttribute('aria-expanded', false); } };
   addEventListener('keydown', e => { if (e.key === 'Escape' && ixp.classList.contains('on')) { closeIx(); ixb.focus(); } });
   addEventListener('pointerdown', e => { if (!ixp.contains(e.target) && !ixb.contains(e.target)) closeIx(); });
-  let ixY = 0; ixb.addEventListener('click', () => (ixY = scrollY)); addEventListener('scroll', () => { if (Math.abs(scrollY - ixY) > 80) closeIx(); }, { passive: true });
+  let ixY = 0; ixb.addEventListener('click', () => (ixY = scrollY));
+  // v2.20: only the user's own scrolling closes it; a jump or a step moving the page never does
+  addEventListener('scroll', () => { if (navTo != null || jumping) { ixY = scrollY; return; } if (Math.abs(scrollY - ixY) > 80) closeIx(); }, { passive: true });
   // Index, brand chip, back to top: never drag the page through every chapter. Neighbouring sections scroll
   // smoothly; anything further is a cut: the content fades out, the page moves while hidden, the destination fades
   // in and plays its own entrance. The background never jumps: the field keeps its position and the page tone
   // blends from the old colour to the new one.
   const mainEl = $('main'), footEl = $('footer.ft');
-  let jumping = false;
   function jumpTo(top, el, act, step) {
     const from = scrollY;
     const setAll = () => STEPPERS.forEach(o => { const past = o !== act && top >= o.st.end - 2; o.set(o === act ? step : (past ? o.n - 1 : 0)); o.frozen = past; });
     if (RMQ.matches) { scrollTo(0, top); ScrollTrigger.update(); setAll(); return; }
+    if (jumping) { jumpNext = [top, el, act, step]; return; }
     if (Math.abs(top - from) <= innerHeight * 1.15 && !act) { scrollToY(top, .9); return; }
-    if (jumping) return; jumping = true;
+    jumping = true;
     // 7 nov: a dip, never a slide. Opacity only (a transform on <main> would unhook the pinned acts, which then pop in
     // late); the page empties, the tone changes while it is empty, and the destination fades in where it already is.
     const parts = [mainEl, footEl].filter(Boolean);
@@ -1931,7 +1996,21 @@
       const tone = bg0 && bg1 && bg0 !== bg1;
       if (tone) gsap.fromTo(root, { '--c-bg': bg0 }, { '--c-bg': bg1, duration: .5, ease: 'sine.inOut' });
       requestAnimationFrame(() => requestAnimationFrame(() => { navTo = null; }));
-      gsap.fromTo(parts, { opacity: 0 }, { opacity: 1, duration: .6, ease: 'power2.out', delay: tone ? .3 : .05, clearProps: 'opacity', onComplete: () => (jumping = false) });
+      // v2.20: a jump never lands on empty frames. The pictures on (and just below) the destination screen load first,
+      // capped so a slow network never holds the page hidden for long
+      const t0 = performance.now();
+      const shown = (im) => { if (getComputedStyle(im).visibility === 'hidden') return false; for (let n = im; n && n !== mainEl; n = n.parentElement) if (+getComputedStyle(n).opacity < .05) return false; return true; };
+      const imgs = $$('main img').filter(im => { const r = im.getBoundingClientRect(); return r.bottom > -innerHeight * .25 && r.top < innerHeight * 1.5 && r.width > 0 && shown(im); });
+      imgs.forEach(im => { if (im.loading === 'lazy') im.loading = 'eager'; });
+      const ready = Promise.all(imgs.map(im => (im.complete && im.naturalWidth ? Promise.resolve() : (im.decode ? im.decode() : new Promise(r => im.addEventListener('load', r, { once: true })))).catch(() => {})));
+      Promise.race([ready, new Promise(r => setTimeout(r, 1400))]).then(() => {
+        if (jumpNext) { const nx = jumpNext; jumpNext = null; jumping = false; jumpTo(...nx); return; }   // still hidden: go straight on
+        const wait = Math.max(0, (tone ? .3 : .05) - (performance.now() - t0) / 1000);
+        gsap.fromTo(parts, { opacity: 0 }, { opacity: 1, duration: .6, ease: 'power2.out', delay: wait, clearProps: 'opacity', onComplete: () => {
+          jumping = false;
+          if (jumpNext) { const nx = jumpNext; jumpNext = null; jumpTo(...nx); }
+        } });
+      });
     } });
   }
   $$('#ixp a, a[href^="#s"], a.skip').forEach(a => a.addEventListener('click', e => {
@@ -2001,7 +2080,7 @@
 
   /* ---------- lightbox: every photo opens full size over the blurred page (6 nov) ---------- */
   (() => {
-    const SEL = '#s00 [data-a^=ph], #s03c img[src*="mk-"], #s03c img[src*="dg-"], #s03c img[src*="plan-"], #s04a .ivm img, #s04a .ipk img, #s04a .mpk img, #s04a .imap img, #s04c .capp img, #s04c .csb img, #s04b [data-a=pan] img, #s05 img[alt]:not([alt=""]), #s08 [data-gal-track] img';
+    const SEL = '#s00 [data-a^=ph], #s03c img[src*="mk-"], #s03c img[src*="dg-"], #s03c img[src*="plan-"], #s04a .ivm img, #s04a .ipk img, #s04a .mpk img, #s04a .imap img, #s04c .capp img, #s04b [data-a=pan] img, #s05 img[alt]:not([alt=""]), #s08 [data-gal-track] img';
     const box = document.createElement('div');
     box.id = 'lbx'; box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true'); box.setAttribute('aria-label', 'Enlarged image'); box.hidden = true;
     box.innerHTML = '<div class="lb-bg"></div><img class="lb-im" alt=""><p class="lb-cap"></p><button type="button" class="lb-x" aria-label="Close image">' +
