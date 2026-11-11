@@ -14,7 +14,7 @@
   const PROFILE = { act2: 'night', s00: 'night', s01: 'navy', s02: 'navy', s02a: 'sky', s02b: 'night', s03a: 'night', s03b: 'night', s03c: 'night', s04a: 'sky', s04b: 'sky', s04c: 'night', s04d: 'night', s05: 'night', s06: 'night', s06b: 'night', s07: 'night', s08: 'night', s09: 'night' };
   // how present the vector field is behind each scene (content-heavy scenes keep it quieter)
   const FIELD = { s00: 1, s01: .85, s02a: .6, s02b: .5, s03a: .7, s03b: .8, s03c: .45, s04a: .4, s04b: .4, s04c: .6, s04d: .6, s05: .75, s06: .8, s06b: .5, s07: .75, s08: .5, s09: .6 };
-  const secs = $$('main > .sc, .ft');
+  const secs = $$('main > .sc, footer.ft');
   const RMQ = matchMedia('(prefers-reduced-motion: reduce)');
   ScrollTrigger.config({ ignoreMobileResize: true });
 
@@ -158,7 +158,7 @@
     let id = null;
     const a1 = window.__act && window.__act(), a2 = window.__act2 && window.__act2(), y = scrollY;
     if (a2 && a2.st && y >= a2.st.start - 2 && y <= a2.st.end + 2) { const ch = a2.chs.filter(c => c.from <= a2.at).pop(); id = ch && ch.id; }
-    else if (a1 && a1.st && y >= a1.st.start - 2 && y <= a1.st.end + 2) id = ['s00', 's01', 's02', 's02a'][Math.min(a1.at, 3)] || 's02a';
+    else if (a1 && a1.st && y >= a1.st.start - 2 && y <= a1.st.end + 2) id = a1.at === 0 ? 's00' : a1.at === 1 ? 's01' : a1.at < (a1.AG0 || 3) ? 's02' : 's02a';
     else { const e = document.elementFromPoint(innerWidth / 2, innerHeight / 2); const sc = e && e.closest('section[id], .lay[id], .mlay[id]'); id = sc && sc.id; }
     const links = $$('#ixp a'); let hit = null;
     links.forEach(l => { if (l.getAttribute('href') === '#' + id) hit = l; });   // the last match is the most specific
@@ -285,7 +285,7 @@
     const own = (els) => { (els && els.length !== undefined ? els : [els]).forEach(e => e && HANDLED.add(e)); return els; };
     // Act 2 (6 nov, Israel's sketches): on laptop the map, proposal, concept, digital, venue, plenary, social event,
     // crew and sustainability are layers of ONE pinned scene; each gesture plays one step or one hand-over, in time
-    const A2IDS = ['s03a', 's03b', 's03c', 's04b', 's04a', 's04c', 's05', 's06', 's06b', 's07'];
+    const A2IDS = ['s03a', 's03b', 's03c', 's04b', 's04a', 's04c', 's05', 's06', 's06b'];
     const ACT2 = !c.mob && !RM && !!$('#s03a');
     const A2X = { loops: [] };
     let a2wrap = null;
@@ -452,7 +452,8 @@
         <text font-size="11.5" font-weight="800" letter-spacing="2.6" fill="currentColor" stroke="none"><textPath href="#${sid}">SEVILLE · LEZL · 1–3 JUNE 2027 · CLEARED ·</textPath></text>
         <circle cx="100" cy="100" r="66" stroke-width="1.6"/>
         <image href="img/kv/badge.webp" x="38" y="38" width="124" height="124" filter="url(#${sid}i)"/></g></svg>`;
-      card.appendChild(stamp);
+      ($('.stslot', card) || card).appendChild(stamp);   // v2.28: mobile has a slot for it at the head of the card
+      if (stamp.parentElement !== card) stamp.parentElement.prepend(stamp);
       pt.fromTo(stamp, { scale: 1.6, rotation: -30, opacity: 0 }, { scale: 1, rotation: -14, opacity: 1, duration: .26, ease: 'power4.in' }, 1.08)
         .fromTo(card, { x: 0 }, { x: 3, duration: .04, yoyo: true, repeat: 1 }, 1.3);
       if ($('[data-a=sub]', brief)) pt.fromTo($('[data-a=sub]', brief), { y: 24, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: .4, ease: 'power2.out' }, .7);
@@ -569,11 +570,13 @@
         $$('[data-prev]', agL).forEach(b => b.addEventListener('click', () => go((dayOn + 2) % 3)));
       } else {
         // v2: 0 cover · 1 boarding pass · 2 objectives · 3–5 agenda, one day each · 6 the window opens on the blue
-        const n = 7, T1 = 3.75, T2 = T1 + 2.6, AG = T2 + 2.3, STEP = 1.05;
-        const marks = [0, T1, T2, AG, AG + STEP, AG + 2 * STEP, AG + 2 * STEP + 2.0];
-        const AG0 = 3, AG1 = 5;
+        // v2.28: on phones the objectives are the back of the accreditation, one per step (4 steps instead of 1)
+        const bm = c.mob ? $('.pbm', brief) : null, objsM = bm ? $$('[data-a=objm]', bm) : [], OS = bm ? objsM.length : 1, OSTEP = 1.2;
+        const T1 = 3.75, T2 = T1 + 2.6, T2b = T2 + (OS - 1) * OSTEP, AG = T2b + 2.3, STEP = 1.05;
+        const marks = [0, T1, ...Array.from({ length: OS }, (_, k) => T2 + k * OSTEP), AG, AG + STEP, AG + 2 * STEP, AG + 2 * STEP + 2.0];
+        const n = marks.length, AG0 = 2 + OS, AG1 = AG0 + 2;
         const tl = gsap.timeline({ paused: true, onUpdate: render });
-        const heroTxt0 = $$('.klab, .ktt, .kmeta, .sig, .lay-hero [data-a=cta]', S).filter(e => hero.contains(e));
+        const heroTxt0 = $$('.klab, .ktt, .kmeta, .sig, .sb, .lay-hero [data-a=cta]', S).filter(e => hero.contains(e));
         const heroTxt = heroTxt0.filter(e => !heroTxt0.some(o => o !== e && o.contains(e)));  // never animate a child and its parent
         const briefT = $('[data-a=t]', brief), op = $('[data-a=op]', brief), bsub = $('[data-a=sub]', brief);
         const back = $('.pbk', brief);
@@ -621,6 +624,30 @@
               .fromTo($('.ott', ob), { y: 14, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: .55, ease: 'power3.out', immediateRender: false }, at + .16)
               .fromTo($('.obar', ob), { scaleX: 0, transformOrigin: '0% 50%' }, { scaleX: 1, duration: .5, ease: 'power3.out', immediateRender: false }, at + .26)
               .fromTo($('.otx', ob), { y: 12, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: .55, ease: 'power3.out', immediateRender: false }, at + .3); });
+        } else if (bm) {
+          // 1 → 2 (phones): the C295 flies off; the accreditation turns over; its back shows objective 01
+          const parts = (ob) => [$('.oic', ob), $('.onum', ob), $('.ott', ob), $('.obar', ob), $('.otx', ob)];
+          const dts = $$('.dts i', bm);
+          gsap.set([card, bm], { transformPerspective: 1200 }); gsap.set(bm, { autoAlpha: 0 });
+          objsM.forEach((ob, k) => gsap.set(ob, { autoAlpha: k ? 0 : 1 }));
+          gsap.set(parts(objsM[0]), { autoAlpha: 0, y: 12 });
+          tl.to(op, { x: 160, y: -150, rotation: -6, autoAlpha: 0, duration: .8, ease: 'power2.in' }, T1)
+            .fromTo(card, { rotationY: 0 }, { rotationY: 90, duration: .55, ease: 'power2.in', immediateRender: false }, T1 + .15)
+            .set(card, { autoAlpha: 0 }, T1 + .7)
+            .fromTo(bm, { rotationY: -90, autoAlpha: 1 }, { rotationY: 0, autoAlpha: 1, duration: .7, ease: 'power2.out', immediateRender: false }, T1 + .7)
+            .set(objL, { autoAlpha: 1 }, T1 + .6)
+            .fromTo(ohead, { y: 24, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: .7, ease: 'power3.out', immediateRender: false }, T1 + .65)
+            .fromTo(parts(objsM[0]), { autoAlpha: 0, y: 12 }, { autoAlpha: 1, y: 0, duration: .55, stagger: .07, ease: 'power3.out', immediateRender: false }, T1 + 1.15);
+          // 2 … 5: one objective per step; the current one slides out, the next comes in part by part
+          for (let k = 1; k < OS; k++) {
+            const at = T2 + (k - 1) * OSTEP;
+            tl.to(objsM[k - 1], { autoAlpha: 0, x: -24, duration: .4, ease: 'power2.in' }, at)
+              .fromTo(objsM[k], { autoAlpha: 1, x: 0 }, { autoAlpha: 1, x: 0, duration: .01, immediateRender: false }, at + .38)
+              .fromTo(parts(objsM[k]), { autoAlpha: 0, y: 12 }, { autoAlpha: 1, y: 0, duration: .55, stagger: .07, ease: 'power3.out', immediateRender: false }, at + .4)
+              .to(dts[k - 1] || {}, { backgroundColor: '#c9d3e3', duration: .3 }, at + .2)
+              .fromTo(dts[k] || {}, { backgroundColor: '#c9d3e3' }, { backgroundColor: '#00205b', duration: .3, immediateRender: false }, at + .3);
+            gsap.set(parts(objsM[k]), { autoAlpha: 0, y: 12 });
+          }
         } else {
           tl.to(pass, { y: '-=120', x: '+=60', rotation: '-=4', autoAlpha: 0, duration: .9, ease: 'power2.in' }, T1 + .05)
             .set(brief, { autoAlpha: 0 }, T1 + .96)
@@ -633,22 +660,26 @@
         const menus = agKids.filter(e => !e.contains(frame));
         const side = (e) => { const r = e.getBoundingClientRect(); return c.mob ? { y: (r.top + r.height / 2 < fcy ? -1 : 1) * 30 } : { x: (r.left + r.width / 2 < fcx ? -1 : 1) * 60 }; };
         gsap.set(frame, { transformPerspective: 1500 });
-        tl.to(P, { flip: 1, duration: .001 }, T2);
-        if (back) tl.to(ohead, { y: -20, autoAlpha: 0, duration: .45, ease: 'power2.in' }, T2)
+        tl.to(P, { flip: 1, duration: .001 }, T2b);
+        if (back) tl.to(ohead, { y: -20, autoAlpha: 0, duration: .45, ease: 'power2.in' }, T2b)
           // 2 → 3 (laptop): the second turn; where the front of the pass should come back, the window arrives
-          .fromTo(back, { rotationY: 0 }, { rotationY: 90, duration: .6, ease: 'power2.in', immediateRender: false }, T2 + .05)
-          .set(back, { autoAlpha: 0 }, T2 + .66)
-          .set(brief, { autoAlpha: 0 }, T2 + .66);
-        else tl.to([...objs].reverse(), { y: -20, autoAlpha: 0, duration: .45, stagger: .05, ease: 'power2.in' }, T2)
-          .to(ohead, { y: -20, autoAlpha: 0, duration: .45, ease: 'power2.in' }, T2 + .1);
+          .fromTo(back, { rotationY: 0 }, { rotationY: 90, duration: .6, ease: 'power2.in', immediateRender: false }, T2b + .05)
+          .set(back, { autoAlpha: 0 }, T2b + .66)
+          .set(brief, { autoAlpha: 0 }, T2b + .66);
+        else if (bm) tl.to(ohead, { y: -20, autoAlpha: 0, duration: .45, ease: 'power2.in' }, T2b)
+          .fromTo(bm, { rotationY: 0 }, { rotationY: 90, duration: .6, ease: 'power2.in', immediateRender: false }, T2b + .05)
+          .set(bm, { autoAlpha: 0 }, T2b + .66)
+          .set(brief, { autoAlpha: 0 }, T2b + .66);
+        else tl.to([...objs].reverse(), { y: -20, autoAlpha: 0, duration: .45, stagger: .05, ease: 'power2.in' }, T2b)
+          .to(ohead, { y: -20, autoAlpha: 0, duration: .45, ease: 'power2.in' }, T2b + .1);
         tl
-          .set(objL, { autoAlpha: 0 }, T2 + .75)
-          .set(agKids, { autoAlpha: 0 }, T2 + .59)
-          .set(agL, { autoAlpha: 1 }, T2 + .6)
-          .fromTo(frame, { rotationY: -90, autoAlpha: 1 }, { rotationY: 0, autoAlpha: 1, duration: .85, ease: 'power2.out', immediateRender: false }, T2 + .6);
-        if (c.mob) tl.fromTo(agKids.filter(e => e.contains(frame)), { autoAlpha: 0 }, { autoAlpha: 1, duration: .01, immediateRender: false }, T2 + .6);
-        menus.forEach((e, j) => tl.fromTo(e, { ...side(e), autoAlpha: 0 }, { x: 0, y: 0, autoAlpha: 1, duration: .8, ease: 'power3.out', immediateRender: false }, T2 + .8 + j * .07));
-        tl.to(P, { flip: 0, duration: .001 }, T2 + 1.5);
+          .set(objL, { autoAlpha: 0 }, T2b + .75)
+          .set(agKids, { autoAlpha: 0 }, T2b + .59)
+          .set(agL, { autoAlpha: 1 }, T2b + .6)
+          .fromTo(frame, { rotationY: -90, autoAlpha: 1 }, { rotationY: 0, autoAlpha: 1, duration: .85, ease: 'power2.out', immediateRender: false }, T2b + .6);
+        if (c.mob) tl.fromTo(agKids.filter(e => e.contains(frame)), { autoAlpha: 0 }, { autoAlpha: 1, duration: .01, immediateRender: false }, T2b + .6);
+        menus.forEach((e, j) => tl.fromTo(e, { ...side(e), autoAlpha: 0 }, { x: 0, y: 0, autoAlpha: 1, duration: .8, ease: 'power3.out', immediateRender: false }, T2b + .8 + j * .07));
+        tl.to(P, { flip: 0, duration: .001 }, T2b + 1.5);
         // 3 … 5: three days, each one blind down, view changes, blind up
         for (let kx = 0; kx < 2; kx++) {
           const t = AG + kx * STEP;
@@ -673,7 +704,7 @@
         if (tl.duration() < marks[n - 1]) tl.set({}, {}, marks[n - 1]);
 
         let cur = -1;
-        const CH = (i) => (i === 0 ? 'Cover' : i === 1 ? 'Briefing' : i === 2 ? 'Objectives' : 'Agenda');
+        const CH = (i) => (i === 0 ? 'Cover' : i === 1 ? 'Briefing' : i < AG0 ? 'Objectives' : 'Agenda');
         const mark = (i) => {
           if (i === cur) return; cur = i;
           agSet(Math.max(0, Math.min(2, i - AG0)));
@@ -743,7 +774,7 @@
         };
         o.land = (i, cb) => { o.busy = true; o.t0 = performance.now(); o.drive = true; o.q = 0; show(i); scrollToY(o.pos(i), clamp(Math.abs(curY() - o.pos(i)) / innerHeight * .9, .3, .8), () => { after(); cb && cb(); }); };
         steppers.push(o);
-        ACT = o; o.tl = tl; o.marks = marks;
+        ACT = o; o.tl = tl; o.marks = marks; o.AG0 = AG0;
         mark(0); render();
         ready = true;
         $$('[data-next]', agL).forEach(b => b.addEventListener('click', () => o.go(o.at + 1)));
@@ -919,7 +950,7 @@
         if (RM) { tl.from([brd, m0, ...head].filter(Boolean), { opacity: 0, duration: .2 }); return; }
         if (has(head)) tl.from(head, { y: 30, opacity: 0, duration: .9, stagger: .1, ease: 'power3.out' }, 0);
         if (brd) tl.fromTo(brd, { clipPath: 'inset(0% 0% 100% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1, ease: 'power2.inOut' }, .2);
-        if (has(rows)) tl.from(rows, { opacity: 0, x: -18, duration: .6, stagger: .07, ease: 'power3.out' }, .5);
+        if (has(rows)) tl.from(S.classList.contains('stage-m') ? rows.slice(0, 1) : rows, { opacity: 0, x: -18, duration: .6, stagger: .07, ease: 'power3.out' }, .5);
         if (has(cells0)) tl.fromTo(cells0, { rotationX: -90, opacity: .2 }, { rotationX: 0, opacity: 1, duration: .45, stagger: { amount: .35 }, ease: 'power3.out', immediateRender: false }, .95);
         if (m0) tl.from(m0, { y: 60, scale: .94, opacity: 0, transformOrigin: '50% 60%', duration: 1.1, ease: 'power3.out' }, .45);
       }, 'top 70%');
@@ -929,7 +960,11 @@
         gsap.set(rows[0], ON);
         if (RM) { for (let i = 0; i < 3; i++) tl.set(mocks[i], { opacity: 0 }, i + .5).set(mocks[i + 1], { opacity: 1 }, i + .5).set(rows[i], OFF, i + .5).set(rows[i + 1], ON, i + .5); return; }
         rows.forEach((r, i) => { if (i) gsap.set($$('[data-a=cell]', r), { opacity: .35, color: 'rgba(255,255,255,0)' }); });
+        // v2.28: on phones the board shows one row at a time (the rows share one slot)
+        const one = S.classList.contains('stage-m');
+        if (one) rows.forEach((r, i) => gsap.set(r, { autoAlpha: i ? 0 : 1 }));
         for (let i = 0; i < 3; i++) {
+          if (one) tl.to(rows[i], { autoAlpha: 0, y: -10, duration: .3, ease: 'power2.in' }, i + .1).fromTo(rows[i + 1], { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, duration: .35, ease: 'power2.out', immediateRender: false }, i + .3);
           tl.to(mocks[i], { y: -30, opacity: 0, duration: .5, ease: 'power2.inOut' }, i)
             .fromTo(mocks[i + 1], { y: 60, opacity: 0 }, { y: 0, opacity: 1, duration: .5, ease: 'power3.out', immediateRender: false }, i + .3)
             .fromTo($$('[data-a=cell]', rows[i + 1]), { rotationX: -90 }, { opacity: 1, rotationX: 0, color: '#ffffff', duration: .4, stagger: { amount: .25 }, ease: 'power3.out', immediateRender: false }, i + .3)
@@ -986,6 +1021,15 @@
       });
       area.addEventListener('keydown', e => { if (e.key === 'ArrowRight') go(target = Math.round(st.pos) + 1); if (e.key === 'ArrowLeft') go(target = Math.round(st.pos) - 1); });
       A2X.ple = { st, place, cyl, pans, area, setC, mod: (v) => mod(Math.round(v)), dragging: () => !!p0, moving: () => !!(goTw && goTw.isActive()) };
+      // v2.28: the drum turns on its own while it is on screen (every 3.6 s); a drag or a key holds it for a while
+      if (!RM && !CAP) {
+        let hold = 0;
+        ['pointerdown', 'keydown'].forEach(ev => area.addEventListener(ev, () => (hold = performance.now() + 6000)));
+        const onScreen = () => { const r = area.getBoundingClientRect(); if (r.bottom < 0 || r.top > innerHeight || r.width < 2) return false;
+          for (let el = area; el && el !== document.body; el = el.parentElement) { const cs = getComputedStyle(el); if (cs.visibility === 'hidden' || +cs.opacity < .5 || cs.display === 'none') return false; } return true; };
+        const tick = () => { if (!document.hidden && !p0 && performance.now() > hold && st.off === 0 && st.alpha > .9 && onScreen() && !(goTw && goTw.isActive())) go(target = Math.round(st.pos) + 1, 1.3); gsap.delayedCall(3.6, tick); };
+        gsap.delayedCall(3.6, tick);
+      }
       if (!ACT2) enter(sec, (tl, S) => {
         own(pans);
         if (RM) { tl.from(pans, { opacity: 0, duration: .2 }); return; }
@@ -1106,7 +1150,7 @@
 
     /* ---------- 07 Sostenibilidad ---------- */
     try {
-      if (!ACT2) enter($('#s07'), (tl, S) => {
+      if (!ACT2 && $('#s07')) enter($('#s07'), (tl, S) => {
         $$('[data-a=needle]', S).forEach((n, i) => {
           if (RM) gsap.set(n, { rotation: -135, svgOrigin: n.dataset.o });
           else tl.fromTo(n, { rotation: -135, svgOrigin: n.dataset.o }, { rotation: 135, svgOrigin: n.dataset.o, duration: .55, ease: 'power2.inOut' }, .2 + .12 * i).to(n, { rotation: -135, svgOrigin: n.dataset.o, duration: .65, ease: 'power2.inOut' }, .8 + .12 * i);
@@ -1618,22 +1662,7 @@
       // the destination waypoint (Seville) pulses softly while the chapter is on screen
       if (wdm) { const bl = gsap.to(wdm, { opacity: .45, duration: .9, ease: 'sine.inOut', repeat: -1, yoyo: true, paused: true }); A2X.loops.push([bl, 's06b']); }
 
-      /* ---- work plan → sustainability: the phases clear; the gauges are drawn ---- */
-      const gS = Sg('s07'), gauges = $$('[data-a=gauge]', gS), rims = $$('[data-a=grim]', gS), ticks = $$('[data-a=gtick]', gS);
-      const garcs = gauges.map(g => $('path', g)), needles = $$('[data-a=needle]', gS), glabels = $$(':scope > div > div, h2, h2 ~ p', gS).filter(e => !e.closest('svg'));
-      len1(rims);
-      tl.to(wgate, { clipPath: 'inset(0% 0% 100% 0%)', duration: .5, ease: 'power2.in' }, t)
-        .to(wbd, { clipPath: 'inset(0% 0% 100% 0%)', duration: .7, ease: 'power3.in' }, t + .1)
-        .to([...whead, $('.whint', wS)].filter(Boolean), { opacity: 0, y: -12, duration: .5 }, t + .1);
-      layer('s07', 1, t + .9); layer('s06b', 0, t + 1.0);
-      t += .9;
-      tl.fromTo(rims, { attr: { 'stroke-dasharray': 1, 'stroke-dashoffset': 1 } }, { attr: { 'stroke-dashoffset': 0 }, duration: 1.2, stagger: .14, ease: 'sine.inOut', ...IMM }, t)
-        .fromTo(ticks, { opacity: 0 }, { opacity: 1, duration: .7, stagger: .14, ...IMM }, t + .6)
-        .fromTo(garcs, { opacity: 0 }, { opacity: 1, duration: .7, stagger: .14, ...IMM }, t + .8)
-        .fromTo(glabels, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .8, stagger: .05, ...IMM }, t + .4);
-      needles.forEach((nn, i) => tl.fromTo(nn, { rotation: -135, svgOrigin: nn.dataset.o, opacity: 0 }, { rotation: 135, opacity: 1, svgOrigin: nn.dataset.o, duration: .7, ...IMM }, t + 1.0 + .12 * i)
-        .to(nn, { rotation: -135, svgOrigin: nn.dataset.o, duration: .8 }, t + 1.7 + .12 * i));
-      t += 2.8; marks.push(t); chap('s07', 1);
+      // v2.28: «Smaller footprint» (sustainability) was removed; the work plan closes the act
       if (tl.duration() < t) tl.set({}, {}, t);
 
       /* ---- the stepper: one gesture, one step; up cuts to the chapter before, as it ended ---- */
@@ -1680,6 +1709,9 @@
         // v2.27: only the animation on screen plays, from the start each time it arrives
         csb.forEach((e, j) => { const v = $('video', e); if (!v) return; const on = CHS[ch].id === 's04c' && i - CHS[ch].from === j;
           if (on && v.paused) { try { v.currentTime = 0; } catch (_) {} const pp = v.play(); if (pp && pp.catch) pp.catch(() => {}); } else if (!on && !v.paused) v.pause(); });
+        // v2.29: the Hacienda clip only runs while the Fair proposal (step 3 of the social event) is open
+        $$('video', soS).forEach(v => { const on = CHS[ch].id === 's05' && i - CHS[ch].from === 3;
+          if (on && v.paused) { if (v.preload === 'none') v.preload = 'auto'; const pp = v.play(); if (pp && pp.catch) pp.catch(() => {}); } else if (!on && !v.paused) v.pause(); });
         if (CHS[ch].id === 's04c') { const st = i - CHS[ch].from; [capp, cside].forEach(e => (e.style.pointerEvents = st === 2 ? 'auto' : 'none')); csb.forEach((e, j) => (e.style.pointerEvents = st === j ? 'auto' : 'none')); }
         if (CHS[ch].id === 's04c') cnvs.forEach((b) => { const on = +b.dataset.k === i - CHS[ch].from; b.classList.toggle('on', on); b.setAttribute('aria-current', on ? 'step' : 'false'); });
         if (CHS[ch].id === 's04a') { const st = i - CHS[ch].from, stop = st ? A2X.istops[st - 1] : [0, 0];
@@ -1910,18 +1942,22 @@
     } catch (err) { console.warn('entrances', err); }
 
 
-    /* ---------- page tone: the flight profile, always blended with scroll ---------- */
-    gsap.set(root, { '--c-bg': BG[PROFILE[SECS[0].id]] });
+      // v2.29: a clip marked data-io (phones) plays only while on screen
+    if ('IntersectionObserver' in window) { const vio = new IntersectionObserver((es) => es.forEach(e => { const v = e.target;
+        if (e.isIntersecting) { const pp = v.play(); if (pp && pp.catch) pp.catch(() => {}); } else if (!v.paused) v.pause(); }), { threshold: .35 });
+      $$('video[data-io]').forEach(v => vio.observe(v)); }
+  /* ---------- page tone: the flight profile, always blended with scroll ---------- */
+    gsap.set(root, { '--c-bg': (BG[PROFILE[SECS[0].id]] || BG.night) });
     const trig = (sec) => (sec.parentElement.classList.contains('pin-spacer') ? sec.parentElement : sec);
     if (RM) {
       SECS.forEach(sec => {
-        const to = () => gsap.to(root, { '--c-bg': BG[PROFILE[sec.id]], duration: .3, overwrite: true });
+        const to = () => gsap.to(root, { '--c-bg': BG[PROFILE[sec.id]] || BG.night, duration: .3, overwrite: true });
         ScrollTrigger.create({ trigger: trig(sec), start: 'top center', end: 'bottom center', onEnter: to, onEnterBack: to });
       });
     } else {
       SECS.forEach((sec, i) => {
         if (!i) return;
-        const a = BG[PROFILE[SECS[i - 1].id]], b = BG[PROFILE[sec.id]];
+        const a = BG[PROFILE[SECS[i - 1].id]] || BG.night, b = BG[PROFILE[sec.id]] || BG.night;
         if (a === b) return;
         // a timed, eased cross-fade when the new section takes the middle of the screen: never a hard switch,
         // never a long muddy in-between while you scroll
@@ -2019,7 +2055,7 @@
     closeIx();
     el.setAttribute('tabindex', '-1'); el.focus({ preventScroll: true });
     // targets inside Act 1 (portada, briefing, agenda) are steps of the pinned act
-    const act = window.__act && window.__act(), ACTSTEP = { s00: 0, s01: 1, s02: 2, s02a: 3 };
+    const act = window.__act && window.__act(), ACTSTEP = { s00: 0, s01: 1, s02: 2, s02a: act && act.AG0 || 3 };
     if (act && id in ACTSTEP) {
       const step = ACTSTEP[id], y = scrollY, inAct = y >= act.st.start - 2 && y <= act.st.end + 2;
       if (inAct && Math.abs(step - act.at) <= 1) { act.go(step); return; }
