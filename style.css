@@ -16,6 +16,7 @@
   color-scheme:dark;
 }
 *{box-sizing:border-box}
+html.boot main,html.boot footer.ft,html.boot header.fx{visibility:hidden}
 html{background:var(--c-bg);-webkit-text-size-adjust:100%;text-size-adjust:100%}  /* v2.20: no browser font boosting: the canvas is scaled on purpose */
 html,body{margin:0;color:#fff;font-family:var(--body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 body{overflow-x:hidden;background:var(--c-bg)}

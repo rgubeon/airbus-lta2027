@@ -1,7 +1,9 @@
 /* LTA Operators Conference 2027 · beon. worldwide for Airbus
    One engine: GSAP + ScrollTrigger, Lenis smooth wheel (fine pointers), one fixed vector field behind every scene,
    scroll-scrubbed entrances, and pinned stretches where ONE gesture (wheel, swipe, key) plays ONE complete step. */
-(() => {
+// v2.32 (12 nov): the scenes measure their boxes (cards, panels, frames) when they are built, so they are built once
+// the corporate type has loaded; until then the page stays hidden (html.boot), with a failsafe in the page itself
+const __boot = () => {
   gsap.registerPlugin(ScrollTrigger);
   const CAP = !!window.__CAPTURE;
   const root = document.documentElement;
@@ -2204,7 +2206,16 @@
   })();
 
   if (location.hash === '#final' || /[?&]final\b/.test(location.search)) root.classList.add('final');
-  addEventListener('load', () => ScrollTrigger.refresh());
+  if (document.readyState === 'complete') requestAnimationFrame(() => ScrollTrigger.refresh()); else addEventListener('load', () => ScrollTrigger.refresh());
   window.ST = ScrollTrigger;
   window.__lenis = lenis;
+};
+(() => {
+  let done = false;
+  const go = () => { if (done) return; done = true; try { __boot(); } finally { document.documentElement.classList.remove('boot'); } };
+  const F = document.fonts;
+  if (!F || !F.load) return go();
+  const faces = ["300 16px 'Inter Tight'", "500 16px 'Inter Tight'", "600 16px 'Inter Tight'", "700 16px 'Inter Tight'", "400 16px Inter", "500 16px Inter"];
+  Promise.all(faces.map(f => F.load(f).catch(() => {}))).then(() => F.ready).then(go, go);
+  setTimeout(go, 4000);
 })();
